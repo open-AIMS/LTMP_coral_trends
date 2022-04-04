@@ -124,3 +124,18 @@ COTScategories = function(x) {
     )
 }
 
+ML_gClip <- function(shp, bb){
+    if(class(bb) == "matrix") {
+        if (identical(dim(bb), c(2L,2L))) {
+            b_poly <- as(raster:::extent(as.vector(t(bb))), "SpatialPolygons")
+        } else b_poly = bb
+    } else if (class(bb) =='SpatialPolygons') {
+        b_poly=bb
+    } else b_poly <- as(raster:::extent(bb), "SpatialPolygons")
+  gIntersection(shp, b_poly, byid = T)
+}
+
+
+xy2df<-function(xy) {
+  data.frame(x=xy$x,y=xy$y)
+}
