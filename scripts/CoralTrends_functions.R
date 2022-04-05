@@ -22,9 +22,11 @@ CoralTrends_checkPackages <- function() {
     require(maptools)
     require(raster)
 
+    require(INLA)
     require(rstanarm)
     require(coda)
     require(sf)
+    require(glmmTMB)
 }
 
 ######################################################################
@@ -137,10 +139,6 @@ ML_gClip <- function(shp, bb){
 }
 
 
-xy2df<-function(xy) {
-  data.frame(x=xy$x,y=xy$y)
-}
-
 ######################################################################
 ## The following function generates Zone categories based on De'ath ##
 ## 2012's latitudinal divisions.                                    ##
@@ -171,4 +169,93 @@ median_cover_cat <- function(dat) {
         d <- paste(unique(sort(dat)[(n+1)/2]))
     }
     factor(d)
+}
+
+################################################################
+## The following function converts a list with x and y into a ##
+## data.frame                                                 ##
+##   parameters:                                              ##
+##      xy:    a list with elements x and y                   ##
+##   returns:  a data.frame with fields x and y               ##
+################################################################
+xy2df<-function(xy) {
+  data.frame(x=xy$x,y=xy$y)
+}
+
+
+towns12 <-
+structure(list(town = c("Cooktown", "Cairns", "Townsville", "Bowen",
+"Proserpine", "Mackay", "Rockhampton", "Gladstone", "Port Douglas",
+"Ayr", "Innisfail", "Cardwell"), long = c(145.229629516602, 145.740203857422,
+146.78092956543, 148.190048217773, 148.696716308594, 149.112060546875,
+150.409729003906, 151.094924926758, 145.405410766602, 147.405349731445,
+146.016479492188, 146.024261474609), lat = c(-15.4718799591065,
+-16.9359798431396, -19.2582454681396, -19.9939575195313, -20.311653137207,
+-21.1522636413574, -23.3642120361328, -23.8742027282715, -16.4558181762695,
+-19.5710220336914, -17.516508102417, -18.2670269012451)), .Names = c("town",
+"long", "lat"), row.names = c("Cooktown", "Cairns", "Townsville",
+"Bowen", "Proserpine", "Mackay", "Rockhampton", "Gladstone",
+"Port Douglas", "Ayr", "Innisfail", "Cardwell"), class = "data.frame", col = 1, pch = 21, bg = "red", cex = 1, txt.text = c("Cooktown",
+"Cairns", "Townsville", "Bowen", "Proserpine", "Mackay", "Rockhampton",
+"Gladstone", "Port Douglas", "Ayr", "Innisfail", "Cardwell"), txt.col = 1, txt.cex = 1, txt.pos = 2)
+
+
+
+my_wtd_q = function(x, w, prob, n = 4096)
+  with(density(x, weights = w/sum(w), n = n),
+       x[which.max(cumsum(y*(x[2L] - x[1L])) >= prob)])
+
+cellMeansRaw <- function(dat) {
+    dat %>%
+        group_by(Year) %>%
+        mutate(W2=Tows/sum(Tows)) %>%
+        summarise(Mean=mean(Cover,na.rm=TRUE),
+                  Median=median(Cover, na.rm=TRUE),
+                  Mean.w = weighted.mean(Cover,W2, na.rm=TRUE),
+                  Median.w = my_wtd_q(Cover, W2, 0.5)) %>%
+        ungroup
+}
+
+
+ggproto_Raw <- function(dat) {
+    list(
+        geom_line(data=dat, aes(y=Mean, color='Mean')),
+        geom_line(data=dat, aes(y=Median, color='Median')),
+        geom_line(data=dat,aes(y=Mean.w, color='Mean.w')),
+        geom_line(data=dat,aes(y=Median.w, color='Median.w'))
+    )
+}
+
+
+
+ModelOriginal <- function(form, dat, location) {
+    print(form)
+    mod <- fitOriginal(form, dat)
+    newdata <- cellMeansOriginal(mod, dat, location)
+    return(list(mod=mod, newdata=newdata))
+}
+
+fitOriginal <- function(form, dat) {
+    mod <-  stan_glmer(form,
+                       data=dat,
+                       family=binomial,
+                       iter=5000,
+                       warmup=2500,
+                       chains=3,cores=3)
+    return(mod)
+}
+
+cellMeansOriginal <- function(mod, dat, location) {
+    newdata = data.frame(Location=location,
+                         Year=unique(dat$Year),
+                         N=length(unique(dat$REEF_NAME)))
+    Xmat = model.matrix(~Year, newdata)
+    coefs = data.frame(mod) %>% dplyr:::select(matches('^X.Intercept*|^Year.*'))
+    Fit=binomial()$linkinv(as.matrix(coefs) %*% t(Xmat))
+    newdata = cbind(newdata,
+                    plyr:::adply(Fit,2,function(x) {
+                        data.frame(mean=mean(x), coda:::HPDinterval(coda:::as.mcmc(x)))
+                    })
+                    )
+    return(newdata)
 }

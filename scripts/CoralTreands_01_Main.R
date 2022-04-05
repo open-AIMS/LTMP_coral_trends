@@ -60,3 +60,15 @@ source('CoralTrends_40_processData_Manta_3Zone.R')
 ## - output/figures/MapOfSites.* ##
 ###################################
 source('CoralTrends_50_spatialMap_3Zone.R')
+
+######################################################
+## Generate temporal head maps of data availability ##
+## Heat maps are stored in:                         ##
+## - output/figures/TemporalHeatMap_3Zone.*        ##
+######################################################
+source('CoralTrends_51_temporalHeatMap_3Zone.R')
+
+###############################
+## Fit STAN (or INLA) models ##
+###############################
+if (rerun_models) source('CoralTrends_60_stan_Manta_3Zone.R')

@@ -26,6 +26,7 @@ CoralTrends_tryCatch(
   if(!any(grepl('^primary$',files))) system(paste0('mkdir ', DATA_PATH, 'primary'))
   if(!any(grepl('^processed$',files))) system(paste0('mkdir ', DATA_PATH, 'processed'))
   if(!any(grepl('^spatial$',files))) system(paste0('mkdir ', DATA_PATH, 'spatial'))
+  if(!any(grepl('^modelled$',files))) system(paste0('mkdir ', DATA_PATH, 'modelled'))
 
   files <- list.files(PATH)
   if(!any(grepl('^figures$',files))) system(paste0('mkdir ', PATH, 'figures'))
