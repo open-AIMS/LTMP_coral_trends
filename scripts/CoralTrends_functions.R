@@ -24,6 +24,7 @@ CoralTrends_checkPackages <- function() {
 
     require(rstanarm)
     require(coda)
+    require(sf)
 }
 
 ######################################################################
@@ -138,4 +139,36 @@ ML_gClip <- function(shp, bb){
 
 xy2df<-function(xy) {
   data.frame(x=xy$x,y=xy$y)
+}
+
+######################################################################
+## The following function generates Zone categories based on De'ath ##
+## 2012's latitudinal divisions.                                    ##
+##   parameters:                                                    ##
+##      x:     a numeric vector of latitudes                        ##
+##   returns:  a categorical vector of Zones                        ##
+######################################################################
+CoralTrends_calc3ZoneLocations <- function(x) {
+    factor(ifelse(x<= -10.68 & x > -15.4, 'Northern',  #glenn's version is -11.8
+           ifelse(x<= -15.4 & x > -20.0, 'Central',
+           ifelse(x<= -20.0 & x > -23.92, 'Southern','Outside'))))
+}
+CoralTrends_calc3ZoneLocation <- function(dat) {
+    load(paste0(DATA_PATH, 'primary/gbr_3Zone.RData'))
+    dat %>%
+        st_as_sf(coords = c("Longitude", "Latitude"), crs = st_crs(gbr_3Zone)) %>%
+        st_join(gbr_3Zone) %>%
+        cbind(Longitude=st_coordinates(.)[,1],Latitude=st_coordinates(.)[,2]) %>%
+        st_drop_geometry
+}
+
+## The following function converts a cover into a category representing the median of the category
+median_cover_cat <- function(dat) {
+    n <- length(dat)
+    if (n %% 2 == 0) {
+        d <- paste(unique(sort(dat)[c((n-1)/2, (n+1)/2)]), collapse='/')
+    } else {
+        d <- paste(unique(sort(dat)[(n+1)/2]))
+    }
+    factor(d)
 }
