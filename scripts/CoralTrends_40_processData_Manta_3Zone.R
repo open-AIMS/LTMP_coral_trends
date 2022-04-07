@@ -17,7 +17,7 @@ manta = manta %>% left_join(pcode.mod) %>% droplevels
 #####################################################################
 ## ---- processManta_towlevel
 manta.tow <- manta %>%
-  filter(REPORT_YEAR>1985) %>%
+  filter(REPORT_YEAR>1985, REPORT_YEAR<(finalYear+1)) %>% droplevels() %>%
   mutate(Cover=CoralTrends_calcPercent(LIVE_CORAL)) %>%
   mutate(Latitude=REEF_LAT, Longitude=REEF_LONG) %>%
   CoralTrends_calc3ZoneLocation() %>%
@@ -33,7 +33,7 @@ manta.tow <- manta %>%
 ##
 ## ---- processManta_aggregateToReef
 manta.sum <- manta %>%
-    filter(REPORT_YEAR>1985) %>%
+    filter(REPORT_YEAR>1985, REPORT_YEAR < (finalYear+1)) %>% droplevels() %>%
     mutate(Cover=CoralTrends_calcPercent(LIVE_CORAL)) %>%
     group_by(P_CODE.mod,A_SECTOR,SHELF,REEF_NAME,REEF_ID,REPORT_YEAR) %>%
     summarise(Cover=mean(Cover, na.rm=TRUE),

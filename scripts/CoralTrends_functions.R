@@ -27,6 +27,8 @@ CoralTrends_checkPackages <- function() {
     require(coda)
     require(sf)
     require(glmmTMB)
+    require(brms)
+    require(emmeans)
 }
 
 ######################################################################
@@ -258,4 +260,107 @@ cellMeansOriginal <- function(mod, dat, location) {
                     })
                     )
     return(newdata)
+}
+
+Modelstan_glmer <- function(form, dat) {
+    mod <- stan_glmer(form,
+                      data=dat,
+                      family=mgcv::betar,
+                      weights = dat$Tows,
+                      iter=5000,
+                      warmup=2500,
+                      chains=3,cores=3,
+                      adapt_delta=0.95
+                      )
+    return(mod)
+}
+
+Modelbrms <- function(form, dat) {
+    mod <- brm(bf(form,
+                  family=Beta),
+               data=dat,
+               prior=priors,
+               inits=inits,
+               iter=5000,
+               thin=5,
+               warmup=2500,
+               chains=3, cores=3,
+               control=list(adapt_delta=0.99, max_treedepth=15)
+               )
+
+    return(mod)
+}
+
+dataINLA <- function(dat, level='reef') {
+    dat <- dat %>%
+        mutate(
+            REEF_NAME=as.numeric(factor(REEF_NAME)),
+            REEF_NAME1 = REEF_NAME,
+            REEF_NAME2 = REEF_NAME + max(REEF_NAME),
+            P_CODE.mod=as.numeric(factor(P_CODE.mod)),
+            P_CODE.mod1 = P_CODE.mod,
+            YEAR = as.numeric(factor(Year)),
+            REEF_YEAR=as.numeric(factor(paste0(REEF_NAME,YEAR))),
+            YEAR1 = as.numeric(factor(Year)))
+
+    newdata.hcc <- cbind(Cover=NA,Tows=NA,
+                         expand.grid(Year=levels(dat$Year)),
+                         P_CODE.mod=NA, P_CODE.mod1=NA,
+                         REEF_NAME=NA, REEF_NAME1=NA, REEF_NAME2=NA, YEAR=NA, YEAR1=NA, W=NA,Cvr1=NA,Cvr0=NA,REEF_YEAR=NA)
+    if (level=='reef') {
+        dat.1 <- rbind(dat %>%
+                   dplyr:::select(Cover,Tows,Year,P_CODE.mod, P_CODE.mod1, REEF_NAME, REEF_NAME1, REEF_NAME2, YEAR, YEAR1, W, Cvr1, Cvr0, REEF_YEAR),
+                   newdata.hcc) %>%
+        as.data.frame
+    } else {
+        dat.1 <- rbind(dat %>%
+                       dplyr::select(Cover, Year, P_CODE.mod, P_CODE.mod1, REEF_NAME, REEF_NAME1, REEF_NAME2, YEAR, YEAR1, REEF_YEAR),
+                       newdata.hcc %>% dplyr::select(-W,-Cvr1,-Cvr0,-Tows)) %>%
+            as.data.frame
+    }
+    n.2 = (nrow(dat)+1):nrow(dat.1)
+    list(newdata.hcc=newdata.hcc, dat.1=dat.1, n.2=n.2)
+}
+
+ModelINLA_binomial <- function(form, dat.1) {
+    inla.setOption("enable.inla.argument.weights", TRUE)
+    mod <- inla(form,
+                Ntrials=Tows,
+                data=dat.1,
+                family='binomial',
+                control.predictor = list(compute=TRUE, link=1, quantiles=c(0.025,0.25,0.5,0.75,0.975)))
+    return(mod)
+}
+
+ModelINLA_beta <- function(form, dat.1, family='beta',weights=NULL) {
+    inla.setOption("enable.inla.argument.weights", TRUE)
+    mod <- inla(form,
+                weights=weights,
+                data=dat.1,
+                family=family,
+                control.fixed=list(mean=0, prec=0.001, mean.intercept=0.5, prec.intercept=0.001),
+                ## verbose=TRUE,
+                control.predictor = list(compute=TRUE, link=1, quantiles=c(0.025,0.25,0.5,0.75,0.975)))
+    return(mod)
+}
+
+cellMeansINLA <- function(mod, newdata.hcc, n.2, FUN=plogis) {
+    newdata.hcc = cbind(newdata.hcc,
+                        mod$summary.linear.predictor[n.2,]
+                        ) %>%
+        as.data.frame %>%
+        mutate(mean=FUN(mean),
+               median=FUN(`0.5quant`),
+               lower=FUN(`0.025quant`),
+               upper=FUN(`0.975quant`),
+               lower25=FUN(`0.25quant`),
+               upper75=FUN(`0.75quant`)
+               ) %>%
+        dplyr::select(Year,mean,lower,upper,lower25,upper75)
+
+    newdata.hcc %>%
+        ggplot(aes(y=mean, x=as.numeric(Year))) +
+        geom_ribbon(aes(ymin=lower, ymax=upper), alpha=0.3) +
+        geom_line()
+    return(newdata.hcc)
 }
