@@ -577,21 +577,6 @@ if ('glmmTMB_tow beta disp' %in% models) {
 
 ## ----end
 
-## ---- Central.glmmTMB.tow.beta disp
-if ('glmmTMB_tow beta disp' %in% models) {
-    mod.central_glmmTMB.beta.disp <- glmmTMB(Cover ~ Year + (1|REEF_NAME/REEF_YEAR),
-                                     dispformula = ~Year,
-                                     data=manta.tow.central,
-                                     ## weights=dat.all.central$Tows,
-                                     family=beta_family())
-    dat.central_glmmTMB.beta.disp = emmeans(mod.central_glmmTMB.beta.disp, ~Year, type='response') %>%
-        as.data.frame()
-    ## DHARMa::simulateResiduals(mod.central_glmmTMB.beta.disp, plot=TRUE)
-    ## performance::check_model(mod.central_glmmTMB.beta.disp)
-    save(mod.central_glmmTMB.beta.disp, dat.central_glmmTMB.beta.disp, file=paste0('../data/modelled/mod.central_glmmTMB.beta.disp.RData'))
-}
-## ----end
-
 
 ## Southern
 ## ---- Southern
