@@ -72,3 +72,38 @@ source('CoralTrends_51_temporalHeatMap_3Zone.R')
 ## Fit STAN (or INLA) models ##
 ###############################
 if (rerun_models) source('CoralTrends_60_stan_Manta_3Zone.R')
+
+##################################
+## Disturbance figures and maps ##
+##################################
+source('CoralTrends_71_bleaching.R')
+source('CoralTrends_72_cots.R')
+source('CoralTrends_73_cyclones.R')
+
+############################
+## Construct trend graphs ##
+############################
+source('CoralTrends_80_trend_manta_3Zone.R')
+
+## Map
+source('CoralTrends_map_manta.R') 
+
+## Disturbance Frequency
+source('CoralTrends_75_disturbanceFrequency_3Zone.R')
+
+
+## Maps of all the disturbances
+source('CoralTrend_spatialFigures.R') 
+
+
+## Zip up some stuff for Mike
+zip('output/NewFigures4Mike.zip', files=c('output/figures/3Zones.pdf',
+                                          'output/figures/Disturbances_severe_compilation_new.pdf',
+                                          'output/figures/Disturbances_all_no_label.pdf',
+                                          'output/figures/Fig1mapE_3Zones_new.pdf',
+                                          'output/figures/CoralChangeFig.pdf',
+                                          'data/modelled/dist.table.intercepts.csv',
+                                          'data/modelled/dist.table.slopes.csv'))
+
+
+
