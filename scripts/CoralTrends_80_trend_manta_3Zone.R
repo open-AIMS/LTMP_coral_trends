@@ -4,6 +4,7 @@ CoralTrends_checkPackages()
 INCLUDE_GBR = FALSE
 
 ## ---- load data
+
 load(file='../data/processed/manta.sum.RData')
 
 load(file='../data/modelled/mod.gbr_glmmTMB.beta.disp.RData')
@@ -50,6 +51,8 @@ load(file='../data/spatial/spatial_3Zone.RData')
 load(file='../data/modelled/cots.sum.all_3Zone.RData')
 load(file='../data/modelled/bleaching.sum.all_3Zone.RData')
 load(file='../data/modelled/cyclones.sum.all_3Zone.RData')
+
+hues <- RColorBrewer::brewer.pal(4, "Blues")
 ## ----end
 
 ## ---- number of reefs per selected years
@@ -246,7 +249,7 @@ dev.off()
         geom_blank(aes(x=250,y=-20))
 
 
-    if (!INCLUDE_GBR) gt1=gt2; gt2=gt3; gt3=gt4; gt4=gt5;
+    if (!INCLUDE_GBR) gt1=gt2; gt2=gt3; gt3=gt4; #gt4=gt5;
 
     save(gt1, gt2, gt3, file='../data/spatial/gts.RData')
     ## ----end
@@ -515,11 +518,11 @@ dev.off()
         cots.dat = cots.sum.all %>% filter(REPORT_YEAR >1985, COTScat %in% c('IO','AO'))
         gcots = ggplot(cots.dat, aes(y=COTS.p, x=REPORT_YEAR-0.3)) +
             geom_bar(stat='identity',position='stack',aes(fill=COTScat),width=0.1,show.legend=FALSE)+
-            geom_bar(data=cots.dat %>% filter(COTScat %in% c('IO','AO')),stat='identity',position='stack',aes(fill=COTScat),width=0.3,show.legend=FALSE)+
+            geom_bar(data=cots.dat %>% filter(COTScat %in% c('IO','AO')),stat='identity',position='stack',aes(fill=COTScat),width=0.3,show.legend=TRUE)+
             geom_bar(data=cots.dat %>% filter(COTScat %in% c('AO')),stat='identity',position='stack',aes(fill=COTScat),width=0.3,show.legend=FALSE)+
                                         #geom_col(position='stack',aes(fill=COTScat),width=0.1,show.legend=TRUE)+
                                         #geom_area(position='stack',aes(fill=COTScat),show.legend=TRUE)+
-            scale_fill_manual('', breaks=c('IO','AO'), labels=c('IO','AO'), values=scales:::brewer_pal(palette='Greens')(3)[-1]) +
+            scale_fill_manual('COTS outbreak status', breaks=c('IO','AO'), labels=c('IO','AO'), values=scales:::brewer_pal(palette='Greens')(3)[-1]) +
                                         #geom_bar(stat='identity',position='stack',aes(alpha=COTScat), fill=brewer.pal(3,'Dark2')[1],show.legend=FALSE,width=0.3) +
                                         #scale_alpha_manual(breaks=c('NO','IO','AO'), values=c(0.2,0.4,1)) +
             facet_wrap(~Location, nrow=1, strip.position='top',scales='fixed', labeller=labeller(Location=setNames(paste0("", labs, "\n"), labs)))+
@@ -540,6 +543,7 @@ dev.off()
                   panel.grid.minor.x=element_line(size=0.1,color=NA,linetype='dashed'),
                   panel.grid.major.x=element_line(size=0.1,color='gray70',linetype='dashed'),
                   plot.margin=unit(c(2,5,5,0),'pt'),
+                  legend.position = 'bottom',
                   strip.text=element_text(margin=margin(t=0.5, b=0.5,unit='lines'),size=20,lineheight=0.5, face='bold',hjust=0.9,vjust=-1))
                                         #strip.text.x=element_blank(), strip.background=element_blank())
         gcots
@@ -569,11 +573,11 @@ dev.off()
         bleaching.dat <- bleaching.sum.all %>% filter(REPORT_YEAR >1985, REPORT_YEAR < (finalYear+1), BLEACHINGcat!='0')
         gbleaching = ggplot(bleaching.dat, aes(y=BLEACHING.p*100, x=REPORT_YEAR+0.3)) +
             geom_bar(stat='identity',position='stack',aes(fill=BLEACHINGcat),width=0.3,show.legend=FALSE)+
-            geom_bar(data=bleaching.dat %>% filter(BLEACHINGcat %in% c('2','3','4')),stat='identity',position='stack',aes(fill=BLEACHINGcat),width=0.3,show.legend=FALSE)+
+            geom_bar(data=bleaching.dat %>% filter(BLEACHINGcat %in% c('2','3','4')),stat='identity',position='stack',aes(fill=BLEACHINGcat),width=0.3,show.legend=TRUE)+
             geom_bar(data=bleaching.dat %>% filter(BLEACHINGcat %in% c('3','4')),stat='identity',position='stack',aes(fill=BLEACHINGcat),width=0.3,show.legend=FALSE)+
             geom_bar(data=bleaching.dat %>% filter(BLEACHINGcat %in% c('4')),stat='identity',position='stack',aes(fill=BLEACHINGcat),width=0.3,show.legend=FALSE)+
                                         #geom_bar(stat='identity',position='stack',aes(fill=BLEACHINGcat),show.legend=FALSE,width=0.3)+
-            scale_fill_manual('', breaks=c(1,2,3,4,5), labels=c(1,2,3,4,5), values=c(scales:::brewer_pal(palette='Reds')(6)[-1])) +
+            scale_fill_manual('Bleaching severity', breaks=c(1,2,3,4,5), labels=c(1,2,3,4,5), values=c(scales:::brewer_pal(palette='Reds')(6)[-1])) +
                                         #geom_bar(stat='identity',position='stack',aes(alpha=BLEACHINGcat), fill=brewer.pal(3,'Dark2')[2],show.legend=FALSE,width=0.3) +
             facet_wrap(~Location, nrow=1, strip.position='top',scales='fixed', labeller=labeller(Location=setNames(paste0("", labs, "\n"), labs)))+
                                         #scale_alpha_manual(breaks=c(0,1,2,3,4), values=c(0,0.25,0.5,0.75,1)) +
@@ -594,6 +598,7 @@ dev.off()
                   panel.grid.minor.x=element_line(size=0.1,color=NA,linetype='dashed'),
                   panel.grid.major.x=element_line(size=0.1,color='gray70',linetype='dashed'),
                   plot.margin=unit(c(2,5,5,0),'pt'),
+                  legend.position = 'bottom',
                   strip.text=element_text(margin=margin(t=0.5, b=0.5,unit='lines'),size=20,lineheight=0.5, face='bold',hjust=0.9,vjust=-1))
                                         #strip.text.x=element_blank(), strip.background=element_blank())
         gbleaching
@@ -603,11 +608,11 @@ dev.off()
         cyclones.dat = cyclones.sum.all %>% filter(REPORT_YEAR >1985, CYCLONEcat!=0)
         gcyclones = ggplot(cyclones.dat, aes(y=CYCLONE.p, x=REPORT_YEAR+0)) +
             geom_bar(stat='identity',position='stack',aes(fill=CYCLONEcat),width=0.3,show.legend=FALSE)+
-            geom_bar(data=cyclones.dat %>% filter(CYCLONEcat %in% c('2','3')),stat='identity',position='stack',aes(fill=CYCLONEcat),width=0.3,show.legend=FALSE)+
+            geom_bar(data=cyclones.dat %>% filter(CYCLONEcat %in% c('2','3')),stat='identity',position='stack',aes(fill=CYCLONEcat),width=0.3,show.legend=TRUE)+
             geom_bar(data=cyclones.dat %>% filter(CYCLONEcat %in% c('3')),stat='identity',position='stack',aes(fill=CYCLONEcat),width=0.3,show.legend=FALSE)+
                                         #geom_bar(stat='identity',position='stack',aes(alpha=CYCLONEcat), fill=brewer.pal(3,'Dark2')[3],show.legend=FALSE,width=0.3) +
                                         #geom_bar(stat='identity',position='stack',aes(fill=CYCLONEcat),show.legend=FALSE,width=0.3)+
-            scale_fill_manual('', breaks=c(1,2,3), labels=c(1,2,3), values=c(scales:::brewer_pal(palette='Blues')(4)[-1])) +
+            scale_fill_manual('Cyclone severity', breaks=c(1,2,3), labels=c(1,2,3), values=c(scales:::brewer_pal(palette='Blues')(4)[-1])) +
             facet_wrap(~Location, nrow=1, strip.position='top',scales='fixed', labeller=labeller(Location=setNames(paste0("", labs, "\n"), labs)))+
                                         #scale_alpha_manual(breaks=c(0,1,2,3,4,5), values=c(0,1/5,2/5,3/5,4/5,5/5)) +
 
@@ -628,10 +633,10 @@ dev.off()
           panel.grid.minor.x=element_line(size=0.1,color=NA,linetype='dashed'),
           panel.grid.major.x=element_line(size=0.1,color='gray70',linetype='dashed'),
           plot.margin=unit(c(2,5,5,0),'pt'),
+          legend.position = 'bottom',
           ##strip.text.x=element_blank(), strip.background=element_blank())
           strip.text=element_text(margin=margin(t=0.5, b=0.5,unit='lines'),size=20,lineheight=0.5, face='bold',hjust=0.9,vjust=-1))
         gcyclones
-
 
     }
 
@@ -702,18 +707,21 @@ dev.off()
         gt3_2021
 
         labs.shorter <- gsub(' GBR','',labs)
-        ggbleaching = gbleaching + theme(panel.background=element_blank()) + ggtitle('a)') +
+        ggbleaching = gbleaching + theme(panel.background=element_blank(), legend.justification = 'left', legend.direction = 'horizontal') + ggtitle('a)') +
             facet_grid(Location~., scales='fixed', labeller=labeller(Location=setNames(paste0("", labs.shorter, "\n"), labs))) +
-            theme(panel.spacing.y = unit(15, 'pt'))
+            theme(panel.spacing.y = unit(15, 'pt')) +
+            guides(fill = guide_legend(title.position = 'top'))
 
-        ggcyclones = gcyclones + theme(panel.background=element_blank()) + ggtitle('a)')+
+        ggcyclones = gcyclones + theme(panel.background=element_blank(), legend.justification = c(0.6, 0.5), legend.direction = 'horizontal') + ggtitle('a)')+
             facet_grid(Location~., scales='fixed', labeller=labeller(Location=setNames(paste0("", labs.shorter, "\n"), labs)))+
-            theme(panel.spacing.y = unit(15, 'pt'))
+            theme(panel.spacing.y = unit(15, 'pt')) +
+            guides(fill = guide_legend(title.position = 'top'))
 
 
         ggcots = gcots+
             facet_grid(Location~., scales='fixed', labeller=labeller(Location=setNames(paste0("", labs.shorter, "\n"), labs)))+
-            theme(panel.spacing.y = unit(15, 'pt'))
+            theme(panel.spacing.y = unit(15, 'pt'), legend.justification = "right", legend.direction = 'horizontal') +
+            guides(fill = guide_legend(title.position = 'top'))
 
 
         gtcots <- ggplot_gtable(ggplot_build(ggcots + ggtitle('a)')))
@@ -722,6 +730,7 @@ dev.off()
         panels <- grepl("panel", gtbleaching$layout$name)
 
         pp <- c(subset(gtcots$layout, grepl("panel", gtcots$layout$name), se = t:r))
+        pl <- c(subset(gtcots$layout, grepl("guide-box", gtcots$layout$name), se = t:r))
 
                                         # Overlap panels for second plot on those of the first plot
         gT <- gtable_add_grob(gtcots, gtbleaching$grobs[grepl("panel", gtcots$layout$name)], 
@@ -729,24 +738,29 @@ dev.off()
         gT <- gtable_add_grob(gT, gtcyclones$grobs[grepl("panel", gtcots$layout$name)], 
                               pp$t, pp$l, pp$b, pp$l, name='cyclones')
                                         #gT$widths = gg$widths
+
+        gT <- gtable_add_grob(gT, gtcyclones$grobs[grepl("guide-box", gtcots$layout$name)], 
+                              pl$t, pl$l, pl$b, pl$r, name='cyclones-guide')
+        gT <- gtable_add_grob(gT, gtbleaching$grobs[grepl("guide-box", gtcots$layout$name)], 
+                              pl$t, pl$l, pl$b, pl$r, name='bleaching-guide')
         
         grid.draw(gT)
 
         facets <- grep("strip-r-1-1", gT$layout$name)
         gg <- with(gT$layout[facets,],
                    ## gtable_add_grob(gT, ggplotGrob(gt1),t=t, l=5, b=b, r=5, name="pic_predator"))
-                   gtable_add_grob(gT, ggplotGrob(gt1_2021),t=6, l=6, b=8, r=7, name="pic_predator"))
+                   gtable_add_grob(gT, ggplotGrob(gt1_2021),t=5, l=6, b=7, r=7, name="pic_predator"))
         facets <- grep("strip-r-2-1", gT$layout$name)
         gg <- with(gg$layout[facets,],
-                   gtable_add_grob(gg, ggplotGrob(gt2_2021),t=8, l=6, b=10, r=7, name="pic_predator"))
+                   gtable_add_grob(gg, ggplotGrob(gt2_2021),t=9, l=6, b=9, r=7, name="pic_predator"))
         facets <- grep("strip-r-3-1", gT$layout$name)
         gg_2021 <- with(gg$layout[facets,],
-                        gtable_add_grob(gg, ggplotGrob(gt3_2021),t=10, l=6, b=12, r=7, name="pic_predator"))
+                        gtable_add_grob(gg, ggplotGrob(gt3_2021),t=11, l=6, b=11, r=7, name="pic_predator"))
         grid.draw(gg_2021)
 
         save(gg_2021, file='../data/processed/disturbanceBars-gg-nolabel_transposed.RData')
         ## ggsave(file='output/figures/Disturbances_all_no_label_transposed.pdf',grid.draw(gg_2021))
-        pdf(file='../output/figures/Disturbances_all_no_label_transposed.pdf')
+        pdf(file='../output/figures/Disturbances_all_no_label_transposed.pdf', width = 7, height = 7*1.05)
         grid.draw(gg_2021)
         dev.off()
         ## The following is not working any more 174mm - could try -units PixelsPerCentimeter

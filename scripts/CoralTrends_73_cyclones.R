@@ -54,6 +54,60 @@ cyclones = cyclones %>% mutate(Zone=ifelse(Location=='Northern GBR', 'Northern G
                                     ifelse(Location=='Central GBR', 'Central GBR',
                                     ifelse(Location=='Southern GBR', 'Southern GBR', 'Great Barrier Reef'))))
 
+## 2022 ======================================================
+## Mike would like calculations of the duration between cyclones per decade
+
+cyclones.interval <- cyclones %>%
+    #filter(REEF_ID == 15005) %>%
+    filter(CYCLONEcat > 0) %>%
+    group_by(REEF_NAME) %>% 
+    mutate(lead = lead(REPORT_YEAR),
+           Interval = lead - REPORT_YEAR,
+           Decade = factor(case_when(between(REPORT_YEAR, 1981,1990) ~ 1980,
+                              between(REPORT_YEAR, 1991,2000) ~ 1990,
+                              between(REPORT_YEAR, 2001,2010) ~ 2010,
+                              between(REPORT_YEAR, 2011,2020) ~ 2020)),
+           ) %>%
+#    group_by(Location, Decade, REEF_NAME) %>%
+#    summarise(Interval = mean(Diff, na.rm = TRUE)) %>%
+    ungroup()
+
+ggplot(cyclones.interval) +
+    geom_point(aes(y=Interval, x=REEF_NAME)) +
+    facet_grid(Decade~ Location, scales='free_x')
+
+cyclones.interval %>%
+   group_by(Location, Decade, REEF_NAME) %>%
+   summarise(Interval = mean(Interval, na.rm = TRUE)) %>%
+    group_by(Decade, Location) %>%
+    summarise(Interval = mean(Interval, na.rm=TRUE))
+
+cyclones.interval <- cyclones.interval %>%
+    mutate(Decade_Location = interaction(Decade, Location)) %>%
+    filter(!is.na(Interval))
+
+library(brms)
+cyclones.interval.brm<-brm(Interval~0 + Decade_Location+(Decade_Location|REEF_NAME),
+                                        #family=poisson(link='log'),
+                           family=negbinomial(link = "log", link_shape = "log"),
+                           data=cyclones.interval,
+                           chains=3,iter=2000,warmup=500,thin=2, seed = 1)   
+save(cyclones.interval.brm, file = "../data/modelled/cyclones.interval.brm")
+load(file = "../data/modelled/cyclones.interval.brm")
+summary(cyclones.interval.brm)
+emmeans(cyclones.interval.brm, ~Decade_Location, type='response')
+
+cyclones.interval.brm1<-brm(Interval~0 + Decade+(1|REEF_NAME),
+                                        #family=poisson(link='log'),
+                           family=negbinomial(link = "log", link_shape = "log"),
+                           data=cyclones.interval,
+                           chains=3,iter=2000,warmup=500,thin=2, seed = 1)   
+save(cyclones.interval.brm1, file = "../data/modelled/cyclones.interval.brm")
+load(file = "../data/modelled/cyclones.interval.brm1")
+summary(cyclones.interval.brm1)
+emmeans(cyclones.interval.brm1, ~Decade, type='response')
+## ===========================================================
+
 ## Generate a summary that calculates the number and percentage of reefs in each zone per year
 ## that are impacted by each level of severity category
 cyclones.sum = cyclones %>% group_by(REPORT_YEAR,Zone) %>%

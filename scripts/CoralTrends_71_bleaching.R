@@ -33,7 +33,8 @@ bleaching <- read_csv('../data/primary/220405 combined bleaching scores.csv') %>
     mutate(Zone = Region,
            Location = Region,
            Severe = ifelse(mid.point >= 0.6, 1, 0),
-           BleachingCAT = COE_COTScategories(mid.point)) %>%
+           ## BleachingCAT = COE_COTScategories(mid.point)) %>%
+           BleachingCAT = COE_BLEACHINGcategories(mid.point)) %>%
     filter(!is.na(mid.point),
            REPORT_YEAR < (finalYear + 1)) %>% droplevels() %>%
     group_by(Zone, REPORT_YEAR, Reef, Full.Reef.ID) %>%

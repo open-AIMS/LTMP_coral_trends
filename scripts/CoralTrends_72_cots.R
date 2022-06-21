@@ -15,7 +15,9 @@ ORDER BY V_RM_SAMPLE.REEF_ID, V_RM_SAMPLE.REPORT_YEAR","../data/primary/cots.sql
 if (goto_database_manta) system("java -jar dbExport.jar ../data/primary/cots.sql ../data/primary/cots.csv reef reefmon")
 
 cots <- read.csv('../data/primary/cots.csv',strip.white=TRUE) %>%
-    filter(REPORT_YEAR < (finalYear+1)) %>% droplevels()
+    filter(REPORT_YEAR < (finalYear+1)) %>%
+    #filter(!is.na(VISIT_NO)) %>%
+    droplevels()
 summary(cots)   
 
 

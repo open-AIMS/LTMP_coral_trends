@@ -328,26 +328,37 @@ ggsave(file='../output/figures/Disturbances_Cyclones.any.pdf',d1,width=7, height
 ggsave(file='../output/figures/Disturbances_Cyclones.any.png',d1,width=7, height=3, dpi=300)
 ## ----end
     ## ---- CyclonesSevere - This is the one used..
-dist.table[['Cyclones']] = list()
-cyclones.severe.glmmTMB = glmmTMB(CYCLONEsevere ~ time*Zone + (1|REEF_NAME),
-                               data=cyclones.binary, family=binomial())
-plot(ACF(cyclones.severe.glmmTMB, resType="pearson"), alpha=0.05)
-calcFreqs(cyclones.severe.glmmTMB)
-calcFreqs.matrix(cyclones.severe.glmmTMB)
-dist.table[['Cyclones']][['Intercept']] = calcFreqs(cyclones.severe.glmmTMB)[[1]] %>% dplyr::select(-time) %>% mutate(Disturbance='Cyclones', Stat='Intercept') %>% dplyr::select(Disturbance,Stat,everything())
-dist.table[['Cyclones']][['Slope']] = calcFreqs(cyclones.severe.glmmTMB)[[2]] %>% mutate(Disturbance='Cyclones', Stat='Slope') %>% dplyr::select(Disturbance,Stat,everything())                                
+    dist.table[['Cyclones']] = list()
+    cyclones.severe.glmmTMB = glmmTMB(CYCLONEsevere ~ time*Zone + (1|REEF_NAME),
+                                      data=cyclones.binary, family=binomial())
+    plot(ACF(cyclones.severe.glmmTMB, resType="pearson"), alpha=0.05)
+    calcFreqs(cyclones.severe.glmmTMB)
+    calcFreqs.matrix(cyclones.severe.glmmTMB)
+    dist.table[['Cyclones']][['Intercept']] = calcFreqs(cyclones.severe.glmmTMB)[[1]] %>%
+        dplyr::select(-time) %>%
+        mutate(Disturbance='Cyclones', Stat='Intercept') %>%
+        dplyr::select(Disturbance,Stat,everything())
+    dist.table[['Cyclones']][['Slope']] = calcFreqs(cyclones.severe.glmmTMB)[[2]] %>%
+        mutate(Disturbance='Cyclones', Stat='Slope') %>%
+        dplyr::select(Disturbance,Stat,everything())                                
+    dist.table[['Cyclones']][['PercentChange']] = ((calcFreqs.matrix(cyclones.severe.glmmTMB)[[2]]-1)*100) %>%
+        mutate(Disturbance='Cyclones', Stat='PercentChange') %>%
+        dplyr::select(Disturbance,Stat,everything())  
+    dist.table[['Cyclones']][['InterceptProb']] = calcFreqs.matrix(cyclones.severe.glmmTMB)[[1]] %>%
+        mutate(Disturbance='Cyclones', Stat='InterceptProb') %>%
+        dplyr::select(Disturbance,Stat,everything())  
 
-df=modelEachReef(cyclones.severe.glmmTMB,form=CYCLONEsevere~time)
-d1=plotEffects(cyclones.severe.glmmTMB, firstYear=min(cyclones.binary$REPORT_YEAR), individualReefs=df, ribbonFillColor=brewer_pal(palette='Blues')(4)[4], points=FALSE)
-g.severe.cyclones=d1
-save(g.severe.cyclones, file='../data/modelled/g.severe.cyclones.RData')
-d1_2021=plotEffects(cyclones.severe.glmmTMB, firstYear=min(cyclones.binary$REPORT_YEAR), individualReefs=df, ribbonFillColor=brewer_pal(palette='Blues')(4)[4], points=FALSE, type=2)
-g.severe.cyclones_2021=d1_2021
-save(g.severe.cyclones_2021, file='../data/modelled/g.severe.cyclones_2021.RData')
-ggsave(file='../output/figures/Disturbances_Cyclones.severe.pdf',d1,width=7, height=3)
-ggsave(file='../output/figures/Disturbances_Cyclones.severe.png',d1,width=7, height=3, dpi=300)
-save(cyclones.severe.glmmTMB, file='../data/modelled/cyclones.severe.glmmTMB.RData')
-## ----end
+    df=modelEachReef(cyclones.severe.glmmTMB,form=CYCLONEsevere~time)
+    d1=plotEffects(cyclones.severe.glmmTMB, firstYear=min(cyclones.binary$REPORT_YEAR), individualReefs=df, ribbonFillColor=brewer_pal(palette='Blues')(4)[4], points=FALSE)
+    g.severe.cyclones=d1
+    save(g.severe.cyclones, file='../data/modelled/g.severe.cyclones.RData')
+    d1_2021=plotEffects(cyclones.severe.glmmTMB, firstYear=min(cyclones.binary$REPORT_YEAR), individualReefs=df, ribbonFillColor=brewer_pal(palette='Blues')(4)[4], points=FALSE, type=2)
+    g.severe.cyclones_2021=d1_2021
+    save(g.severe.cyclones_2021, file='../data/modelled/g.severe.cyclones_2021.RData')
+    ggsave(file='../output/figures/Disturbances_Cyclones.severe.pdf',d1,width=7, height=3)
+    ggsave(file='../output/figures/Disturbances_Cyclones.severe.png',d1,width=7, height=3, dpi=300)
+    save(cyclones.severe.glmmTMB, file='../data/modelled/cyclones.severe.glmmTMB.RData')
+    ## ----end
 
     ## ---- CyclonesCat3
 ggplot(cyclones.binary, aes(y=CYCLONEcat3, x=REPORT_YEAR)) + geom_point() + facet_wrap(~Zone)
@@ -513,34 +524,45 @@ ggsave(file='../output/figures/Disturbances_COTS_severe_poly.png',d1,width=7, he
 ## ----end
 
     ## ---- CotsAO - This is the one used..
-dist.table[['COTS']] = list()
-g1=ggplot(cots.binary, aes(y=COTScatAO, x=REPORT_YEAR)) +
-    geom_count(aes(size=..prop.., group=REPORT_YEAR)) + scale_size_area() +
-    facet_wrap(~Zone)
-ggsave(file='../figures/cots_catAO.pdf', g1,width=10, height=3)
+    dist.table[['COTS']] = list()
+    g1=ggplot(cots.binary, aes(y=COTScatAO, x=REPORT_YEAR)) +
+        geom_count(aes(size=..prop.., group=REPORT_YEAR)) + scale_size_area() +
+        facet_wrap(~Zone)
+    ggsave(file='../figures/cots_catAO.pdf', g1,width=10, height=3)
 
-cots.catAO.glmmTMB = glmmTMB(COTScatAO ~ time*Zone + (1|REEF_NAME),# + ar1(-1+time|REEF_NAME),
-                             data=cots.binary, family=binomial())
-save(cots.catAO.glmmTMB, file='../data/modelled/cots.catAO.glmmTMB.RData')
-plot(ACF(cots.catAO.glmmTMB, resType="pearson"), alpha=0.05)
+    cots.catAO.glmmTMB = glmmTMB(COTScatAO ~ time*Zone + (1|REEF_NAME),# + ar1(-1+time|REEF_NAME),
+                                 data=cots.binary, family=binomial())
+    save(cots.catAO.glmmTMB, file='../data/modelled/cots.catAO.glmmTMB.RData')
+    plot(ACF(cots.catAO.glmmTMB, resType="pearson"), alpha=0.05)
 
-calcFreqs(cots.catAO.glmmTMB)
-calcFreqs.matrix(cots.catAO.glmmTMB)
-dist.table[['COTS']][['Intercept']] = calcFreqs(cots.catAO.glmmTMB)[[1]] %>% dplyr::select(-time) %>% mutate(Disturbance='COTS', Stat='Intercept') %>% dplyr::select(Disturbance,Stat,everything())
-dist.table[['COTS']][['Slope']] = calcFreqs(cots.catAO.glmmTMB)[[2]] %>% mutate(Disturbance='COTS', Stat='Slope') %>% dplyr::select(Disturbance,Stat,everything())
+    calcFreqs(cots.catAO.glmmTMB)
+    calcFreqs.matrix(cots.catAO.glmmTMB)
+    dist.table[['COTS']][['Intercept']] = calcFreqs(cots.catAO.glmmTMB)[[1]] %>%
+        dplyr::select(-time) %>%
+        mutate(Disturbance='COTS', Stat='Intercept') %>%
+        dplyr::select(Disturbance,Stat,everything())
+    dist.table[['COTS']][['Slope']] = calcFreqs(cots.catAO.glmmTMB)[[2]] %>%
+        mutate(Disturbance='COTS', Stat='Slope') %>%
+        dplyr::select(Disturbance,Stat,everything())
+    dist.table[['COTS']][['PercentChange']] = ((calcFreqs.matrix(cots.severe.glmmTMB)[[2]]-1)*100) %>%
+        mutate(Disturbance='COTS', Stat='PercentChange') %>%
+        dplyr::select(Disturbance,Stat,everything())  
+    dist.table[['COTS']][['InterceptProb']] = calcFreqs.matrix(cots.severe.glmmTMB)[[1]] %>%
+        mutate(Disturbance='COTS', Stat='InterceptProb') %>%
+        dplyr::select(Disturbance,Stat,everything())  
 
-#df=modelEachReefAR1(cots.catAO.glmmTMB,form=COTScatAO~time+ar1(-1+time|REEF_NAME))
-df=modelEachReef(cots.catAO.glmmTMB,form=COTScatAO~time)
-d1=plotEffects(cots.catAO.glmmTMB, firstYear=min(cots.binary$REPORT_YEAR), individualReefs=df,brewer_pal(palette='Greens')(3)[3], points=FALSE)
-g.AO.cots = d1
-d1_2021=plotEffects(cots.catAO.glmmTMB, firstYear=min(cots.binary$REPORT_YEAR), individualReefs=df,brewer_pal(palette='Greens')(3)[3], points=FALSE, type=2)
-g.AO.cots_2021 = d1_2021
-save(g.AO.cots, file='../data/modelled/g.AO.cots.RData')
-save(g.AO.cots_2021, file='../data/modelled/g.AO.cots_2021.RData')
-ggsave(file='../output/figures/Disturbances_COTS_AO.pdf',d1,width=7, height=3)
-ggsave(file='../output/figures/Disturbances_COTS_AO.png',d1,width=7, height=3, dpi=300)
-#ggsave(file='figures/cots.catAO.glmmTMB.pdf', g1,width=10, height=3)
-## ----end
+                                        #df=modelEachReefAR1(cots.catAO.glmmTMB,form=COTScatAO~time+ar1(-1+time|REEF_NAME))
+    df=modelEachReef(cots.catAO.glmmTMB,form=COTScatAO~time)
+    d1=plotEffects(cots.catAO.glmmTMB, firstYear=min(cots.binary$REPORT_YEAR), individualReefs=df,brewer_pal(palette='Greens')(3)[3], points=FALSE)
+    g.AO.cots = d1
+    d1_2021=plotEffects(cots.catAO.glmmTMB, firstYear=min(cots.binary$REPORT_YEAR), individualReefs=df,brewer_pal(palette='Greens')(3)[3], points=FALSE, type=2)
+    g.AO.cots_2021 = d1_2021
+    save(g.AO.cots, file='../data/modelled/g.AO.cots.RData')
+    save(g.AO.cots_2021, file='../data/modelled/g.AO.cots_2021.RData')
+    ggsave(file='../output/figures/Disturbances_COTS_AO.pdf',d1,width=7, height=3)
+    ggsave(file='../output/figures/Disturbances_COTS_AO.png',d1,width=7, height=3, dpi=300)
+                                        #ggsave(file='figures/cots.catAO.glmmTMB.pdf', g1,width=10, height=3)
+    ## ----end
 
     ##polynomials
     ## ---- CotsCatAOPoly
@@ -694,10 +716,28 @@ ggsave(file='../output/figures/Disturbances_COTS_AO_poly.png',d1,width=7, height
     summary(bleaching.severe.glmmTMB)
     plot(ACF(bleaching.severe.glmmTMB, resType="pearson"), alpha=0.05)
 
+    ## emmeans(bleaching.severe.glmmTMB, ~ time, by = 'Zone', at=list(time=c(0,1,2,3)))
+    ## emmeans(bleaching.severe.glmmTMB, ~ time, by = 'Zone', at=list(time=c(0,1,2,3)), type='response')
+    ## emmeans(bleaching.severe.glmmTMB, ~ time, by = 'Zone', at=list(time=c(0,1,2,3))) %>% pairs() %>% regrid()
+    ## (0.008-0.00695)/(0.00695)
+    ## (0.00920 - 0.00800)/(0.00800)
+    ## (0.01058 - 0.00920)/(0.00920)
+    
     calcFreqs(bleaching.severe.glmmTMB)
     calcFreqs.matrix(bleaching.severe.glmmTMB)
-    dist.table[['Bleaching']][['Intercept']] = calcFreqs(bleaching.severe.glmmTMB)[[1]] %>% dplyr::select(-time) %>% mutate(Disturbance='Bleaching', Stat='Intercept') %>% dplyr::select(Disturbance,Stat,everything())
-    dist.table[['Bleaching']][['Slope']] = calcFreqs(bleaching.severe.glmmTMB)[[2]] %>% mutate(Disturbance='Bleaching', Stat='Slope') %>% dplyr::select(Disturbance,Stat,everything())  
+    dist.table[['Bleaching']][['Intercept']] = calcFreqs(bleaching.severe.glmmTMB)[[1]] %>%
+        dplyr::select(-time) %>%
+        mutate(Disturbance='Bleaching', Stat='Intercept') %>%
+        dplyr::select(Disturbance,Stat,everything())
+    dist.table[['Bleaching']][['Slope']] = calcFreqs(bleaching.severe.glmmTMB)[[2]] %>%
+        mutate(Disturbance='Bleaching', Stat='Slope') %>%
+        dplyr::select(Disturbance,Stat,everything())  
+    dist.table[['Bleaching']][['PercentChange']] = ((calcFreqs.matrix(bleaching.severe.glmmTMB)[[2]]-1)*100) %>%
+        mutate(Disturbance='Bleaching', Stat='PercentChange') %>%
+        dplyr::select(Disturbance,Stat,everything())  
+    dist.table[['Bleaching']][['InterceptProb']] = calcFreqs.matrix(bleaching.severe.glmmTMB)[[1]] %>%
+        mutate(Disturbance='Bleaching', Stat='InterceptProb') %>%
+        dplyr::select(Disturbance,Stat,everything())  
     ## ----
                                         #df=modelEachReefAR1(bleaching.severe.glmmTMB,form=BLEACHINGsevere~time+ar1(-1+time|REEF_NAME))
     df=modelEachReef(bleaching.severe.glmmTMB,form=BLEACHINGsevere~time)
@@ -788,6 +828,9 @@ ggsave(file='../output/figures/Disturbances_COTS_AO_poly.png',d1,width=7, height
 
     write.csv(do.call('rbind',lapply(dist.table, `[[`, 'Intercept')), file='../data/modelled/dist.table.intercepts.csv', quote=FALSE, row.names=FALSE)
     write.csv(do.call('rbind',lapply(dist.table, `[[`, 'Slope')), file='../data/modelled/dist.table.slopes.csv', quote=FALSE, row.names=FALSE)
+    write.csv(do.call('rbind',lapply(dist.table, `[[`, 'PercentChange')), file='../data/modelled/dist.table.percentchange.csv', quote=FALSE, row.names=FALSE)
+    write.csv(do.call('rbind',lapply(dist.table, `[[`, 'InterceptProb')), file='../data/modelled/dist.table.interceptProb.csv', quote=FALSE, row.names=FALSE)
+
 
     ## Combine all disturbances
     disturb.binary = cyclones.binary %>%  dplyr::select(REEF_ID,REPORT_YEAR,Zone,CYCLONEany,CYCLONEsevere) %>%

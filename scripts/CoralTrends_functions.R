@@ -139,6 +139,18 @@ COE_COTScategories = function(x) {
         x > 0.9 ~5
     )
 }
+COE_BLEACHINGcategories = function(x) {
+    case_when(
+        x < 0.025 ~ 0,
+        ## x > 0 & x <= 0.1 ~1,
+        x >= 0.025 & x <= 0.1 ~1,
+        x > 0.1 & x <= 0.3 ~2,
+        x > 0.3 & x <= 0.6 ~3,
+        x > 0.6 & x <= 0.9 ~4,
+        x > 0.9 ~5
+    )
+}
+
 
 ML_gClip <- function(shp, bb){
     if(class(bb) == "matrix") {
