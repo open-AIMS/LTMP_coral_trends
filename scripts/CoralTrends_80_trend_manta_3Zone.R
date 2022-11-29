@@ -416,9 +416,9 @@ dev.off()
     bleaching.dat <- bleaching.sum.all %>% filter(REPORT_YEAR >1985, REPORT_YEAR < (finalYear+1), BLEACHINGcat!='0')
     gbleaching <- ggplot(bleaching.dat, aes(y=BLEACHING.p*100, x=REPORT_YEAR+0.3)) +
         geom_bar(stat='identity',position='stack',aes(fill=BLEACHINGcat),width=0.4,show.legend=FALSE)+
-        geom_bar(data=bleaching.dat %>% filter(BLEACHINGcat %in% c('2','3','4')),stat='identity',position='stack',aes(fill=BLEACHINGcat),width=0.4,show.legend=FALSE)+
-        geom_bar(data=bleaching.dat %>% filter(BLEACHINGcat %in% c('3','4')),stat='identity',position='stack',aes(fill=BLEACHINGcat),width=0.4,show.legend=FALSE)+
-        geom_bar(data=bleaching.dat %>% filter(BLEACHINGcat %in% c('4')),stat='identity',position='stack',aes(fill=BLEACHINGcat),width=0.4,show.legend=FALSE)+
+        ## geom_bar(data=bleaching.dat %>% filter(BLEACHINGcat %in% c('2','3','4')),stat='identity',position='stack',aes(fill=BLEACHINGcat),width=0.4,show.legend=FALSE)+
+        ## geom_bar(data=bleaching.dat %>% filter(BLEACHINGcat %in% c('3','4')),stat='identity',position='stack',aes(fill=BLEACHINGcat),width=0.4,show.legend=FALSE)+
+        ## geom_bar(data=bleaching.dat %>% filter(BLEACHINGcat %in% c('4')),stat='identity',position='stack',aes(fill=BLEACHINGcat),width=0.4,show.legend=FALSE)+
         
                                         #geom_bar(stat='identity',position='stack',aes(fill=BLEACHINGcat),show.legend=FALSE,width=0.3)+
         scale_fill_manual('', breaks=c(1,2,3,4,5), labels=c(1,2,3,4,5), values=c(scales:::brewer_pal(palette='Reds')(6)[-1])) +
@@ -572,10 +572,10 @@ dev.off()
         if (!INCLUDE_GBR) bleaching.sum.all = bleaching.sum.all %>% filter(Location!='Great Barrier Reef') %>% droplevels
         bleaching.dat <- bleaching.sum.all %>% filter(REPORT_YEAR >1985, REPORT_YEAR < (finalYear+1), BLEACHINGcat!='0')
         gbleaching = ggplot(bleaching.dat, aes(y=BLEACHING.p*100, x=REPORT_YEAR+0.3)) +
-            geom_bar(stat='identity',position='stack',aes(fill=BLEACHINGcat),width=0.3,show.legend=FALSE)+
-            geom_bar(data=bleaching.dat %>% filter(BLEACHINGcat %in% c('2','3','4')),stat='identity',position='stack',aes(fill=BLEACHINGcat),width=0.3,show.legend=TRUE)+
-            geom_bar(data=bleaching.dat %>% filter(BLEACHINGcat %in% c('3','4')),stat='identity',position='stack',aes(fill=BLEACHINGcat),width=0.3,show.legend=FALSE)+
-            geom_bar(data=bleaching.dat %>% filter(BLEACHINGcat %in% c('4')),stat='identity',position='stack',aes(fill=BLEACHINGcat),width=0.3,show.legend=FALSE)+
+            geom_bar(stat='identity',position='stack',aes(fill=BLEACHINGcat),width=0.3,show.legend=TRUE)+
+            ## geom_bar(data=bleaching.dat %>% filter(BLEACHINGcat %in% c('2','3','4')),stat='identity',position='stack',aes(fill=BLEACHINGcat),width=0.3,show.legend=TRUE)+
+            ## geom_bar(data=bleaching.dat %>% filter(BLEACHINGcat %in% c('3','4')),stat='identity',position='stack',aes(fill=BLEACHINGcat),width=0.3,show.legend=FALSE)+
+            ## geom_bar(data=bleaching.dat %>% filter(BLEACHINGcat %in% c('4')),stat='identity',position='stack',aes(fill=BLEACHINGcat),width=0.3,show.legend=FALSE)+
                                         #geom_bar(stat='identity',position='stack',aes(fill=BLEACHINGcat),show.legend=FALSE,width=0.3)+
             scale_fill_manual('Bleaching severity', breaks=c(1,2,3,4,5), labels=c(1,2,3,4,5), values=c(scales:::brewer_pal(palette='Reds')(6)[-1])) +
                                         #geom_bar(stat='identity',position='stack',aes(alpha=BLEACHINGcat), fill=brewer.pal(3,'Dark2')[2],show.legend=FALSE,width=0.3) +

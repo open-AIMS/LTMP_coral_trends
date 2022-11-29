@@ -650,7 +650,7 @@ ggsave(file='../output/figures/Disturbances_COTS_AO_poly.png',d1,width=7, height
 
     ## now a version that exludes LTMP data outside of December - March
     bleaching.binary.2 = bleaching.full %>%
-        filter((Project == 'LTMP' & Season == 'Bleaching') | Project == 'COE') %>%
+        filter((Project == 'LTMP' & Season == 'Bleaching') | Project == 'Aerial') %>%
         filter(!is.na(BLEACHINGcat)) %>% droplevels() %>% 
         mutate(BLEACHINGcat=as.factor(BLEACHINGcat)) %>%
         bind_cols %>% data.frame(model.matrix(~-1+BLEACHINGcat, data=.)) %>%

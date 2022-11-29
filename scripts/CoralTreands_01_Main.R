@@ -97,13 +97,19 @@ source('CoralTrend_spatialFigures.R')
 
 
 ## Zip up some stuff for Mike
-zip('output/NewFigures4Mike.zip', files=c('output/figures/3Zones.pdf',
-                                          'output/figures/Disturbances_severe_compilation_new.pdf',
-                                          'output/figures/Disturbances_all_no_label.pdf',
-                                          'output/figures/Fig1mapE_3Zones_new.pdf',
-                                          'output/figures/CoralChangeFig.pdf',
-                                          'data/modelled/dist.table.intercepts.csv',
-                                          'data/modelled/dist.table.slopes.csv'))
+zip('../output/NewFigures4Mike.zip', files=c(
+                                      '../output/figures/Disturbances_severe_compilation_newA_2021.pdf',
+                                      '../output/figures/Disturbances_severe_compilation_newA_2021.png',
+                                      '../output/figures/Disturbances_all_no_label_transposed.pdf',
+                                      '../output/figures/Disturbances_all_no_label_transposed.png')
+    )
+## zip('output/NewFigures4Mike.zip', files=c('output/figures/3Zones.pdf',
+##                                           'output/figures/Disturbances_severe_compilation_new.pdf',
+##                                           'output/figures/Disturbances_all_no_label.pdf',
+##                                           'output/figures/Fig1mapE_3Zones_new.pdf',
+##                                           'output/figures/CoralChangeFig.pdf',
+##                                           'data/modelled/dist.table.intercepts.csv',
+##                                           'data/modelled/dist.table.slopes.csv'))
 
 
 

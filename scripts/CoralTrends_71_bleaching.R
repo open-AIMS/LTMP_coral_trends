@@ -1,5 +1,5 @@
-source('CoralTrends_functions.R') 
 CoralTrends_checkPackages()
+source('CoralTrends_functions.R') 
 
 load('../data/processed/manta.sum.RData')
 
@@ -20,7 +20,7 @@ lookup.reefs <- manta.sum %>%
 ## - filter out 2022
 
 ## ---- Bleaching from Mike (LTMP + COE)
-bleaching <- read_csv('../data/primary/220405 combined bleaching scores.csv') %>%
+bleaching <- read_csv('../data/primary/221115 combined bleaching scores.csv') %>%
     ## The following forces the listed reefs to be in central (which is what their lat/long would do)
     ## the data do not have lat/long, Mike already put them into Regions - however his method was not
     ## consistent with De'ath
@@ -39,7 +39,8 @@ bleaching <- read_csv('../data/primary/220405 combined bleaching scores.csv') %>
            REPORT_YEAR < (finalYear + 1)) %>% droplevels() %>%
     group_by(Zone, REPORT_YEAR, Reef, Full.Reef.ID) %>%
     mutate(n = n()) %>%
-    mutate(flag = ifelse(any(Project == 'COE'), 1,0),
+    ## NEW....  Retain the highest of COE and LTMP
+    mutate(flag = ifelse(any(Project == 'Aerial'), 1,0),
            flag2 = ifelse(Project == 'LTMP', 1, 0),
            flag3 = ifelse(n>1, 1, 0),
            flag4 = ifelse(flag & flag2 & flag3, 1, 0),
@@ -49,40 +50,42 @@ bleaching <- read_csv('../data/primary/220405 combined bleaching scores.csv') %>
     dplyr::select(-starts_with('flag'))
 ## ----end
 ## ---- Bleaching from Ray B
-## Read in the 1998 and 2002 (RB) data
-bleaching.1998 = read.xls('../data/primary/2016 Bleaching Response AIMS Site Selection_1998 2002 Repeated Aerial Su....xlsx', sheet=4, header=TRUE)
-bleaching.1998 = bleaching.1998 %>% dplyr:::select(REEF_ID, X2002.GBR.Name, BLEACHING_1998, BLEACHING_2002,Latitude=Y_COORD,Longitude=X_COORD) %>% 
-    filter(!is.na(REEF_ID)) %>%
-    filter(as.character(REEF_ID)!='') %>%
-    mutate(BLEACHING_1998 = -1*(BLEACHING_1998 - 5),
-           BLEACHING_2002 = -1*(BLEACHING_2002 - 5)) %>%
-    gather(key=REPORT_YEAR, value=BLEACHINGcat,BLEACHING_1998,BLEACHING_2002) %>%
-    mutate(REPORT_YEAR = gsub('BLEACHING_','',REPORT_YEAR)) %>%
-    filter(!is.na(Latitude)) %>% droplevels %>%
-    mutate(Severe = ifelse(BLEACHINGcat > 2, 1, 0)) 
-## Put the reefs into Locations (Zones)
-#bleaching.1998 = CoralTrends_calc3ZoneLocations.df(bleaching.1998)
-## bleaching.1998 = CoralTrends_calc3ZoneLocations(bleaching.1998)
-bleaching.1998 = CoralTrends_calc3ZoneLocation(bleaching.1998) %>%
-    mutate(Region = gsub(' GBR', '', Region))
-bleaching.1998 = bleaching.1998 %>% filter(!is.na(BLEACHINGcat)) %>%
-    mutate(REEF_ID=stringr::str_sub(as.character(REEF_ID), start=1, end=5),
-           BLEACHINGcat=as.numeric(BLEACHINGcat),
-           REPORT_YEAR=as.numeric(as.character(REPORT_YEAR))) %>%
-    group_by(Region, REEF_ID,REPORT_YEAR) %>%
-    summarize(RAYcat=max(BLEACHINGcat)) %>%
-    filter(REEF_ID %in% unique(lookup.reefs$REEF_ID)) %>%
-    mutate(Zone = Region, Location = Region) %>%
-    left_join(lookup.reefs %>%
-              mutate(REEF_ID = as.character(REEF_ID)) %>%
-              dplyr::select(REEF_ID, Reef = REEF_NAME))
-
+## No longer needed, early data is incorporated in bleaching data from Mike
+if (1==2) {
+    ## Read in the 1998 and 2002 (RB) data
+    bleaching.1998 = read.xls('../data/primary/2016 Bleaching Response AIMS Site Selection_1998 2002 Repeated Aerial Su....xlsx', sheet=4, header=TRUE)
+    bleaching.1998 = bleaching.1998 %>% dplyr:::select(REEF_ID, X2002.GBR.Name, BLEACHING_1998, BLEACHING_2002,Latitude=Y_COORD,Longitude=X_COORD) %>% 
+        filter(!is.na(REEF_ID)) %>%
+        filter(as.character(REEF_ID)!='') %>%
+        mutate(BLEACHING_1998 = -1*(BLEACHING_1998 - 5),
+               BLEACHING_2002 = -1*(BLEACHING_2002 - 5)) %>%
+        gather(key=REPORT_YEAR, value=BLEACHINGcat,BLEACHING_1998,BLEACHING_2002) %>%
+        mutate(REPORT_YEAR = gsub('BLEACHING_','',REPORT_YEAR)) %>%
+        filter(!is.na(Latitude)) %>% droplevels %>%
+        mutate(Severe = ifelse(BLEACHINGcat > 2, 1, 0)) 
+    ## Put the reefs into Locations (Zones)
+                                        #bleaching.1998 = CoralTrends_calc3ZoneLocations.df(bleaching.1998)
+    ## bleaching.1998 = CoralTrends_calc3ZoneLocations(bleaching.1998)
+    bleaching.1998 = CoralTrends_calc3ZoneLocation(bleaching.1998) %>%
+        mutate(Region = gsub(' GBR', '', Region))
+    bleaching.1998 = bleaching.1998 %>% filter(!is.na(BLEACHINGcat)) %>%
+        mutate(REEF_ID=stringr::str_sub(as.character(REEF_ID), start=1, end=5),
+               BLEACHINGcat=as.numeric(BLEACHINGcat),
+               REPORT_YEAR=as.numeric(as.character(REPORT_YEAR))) %>%
+        group_by(Region, REEF_ID,REPORT_YEAR) %>%
+        summarize(RAYcat=max(BLEACHINGcat)) %>%
+        filter(REEF_ID %in% unique(lookup.reefs$REEF_ID)) %>%
+        mutate(Zone = Region, Location = Region) %>%
+        left_join(lookup.reefs %>%
+                  mutate(REEF_ID = as.character(REEF_ID)) %>%
+                  dplyr::select(REEF_ID, Reef = REEF_NAME))
+}
 ## ----end
 ## ---- Combine all
 bleaching <-
     bleaching %>%
     mutate(REEF_ID=stringr::str_sub(as.character(Full.Reef.ID), start=1, end=5)) %>% 
-    full_join(bleaching.1998) %>%   
+    ## full_join(bleaching.1998) %>%   
     mutate(BleachingCAT=ifelse(!is.na(BleachingCAT),BleachingCAT,
                         ifelse(!is.na(RAYcat),RAYcat,NA))) %>%
     mutate(Project = ifelse(is.na(Project), 'RB', Project)) %>%
@@ -109,7 +112,7 @@ bleaching.sum.all <-
     bleaching %>%
     group_by(Zone, REPORT_YEAR, BleachingCAT) %>%
     summarise(BLEACHING = n(),
-              BLEACHING.type2 = sum((Project == 'LTMP' & Season == 'Bleaching') | Project %in% c('COE', 'RB')), na.rm=TRUE,
+              BLEACHING.type2 = sum((Project == 'LTMP' & Season == 'Bleaching') | Project %in% c('Aerial', 'RB')), na.rm=TRUE,
               BLEACHING.type2 = ifelse(is.na(BLEACHING.type2), 0, BLEACHING.type2)) %>%
     group_by(Zone, REPORT_YEAR) %>%
     mutate(N = sum(BLEACHING),

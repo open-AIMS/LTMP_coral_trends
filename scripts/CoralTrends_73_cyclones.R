@@ -16,7 +16,7 @@ all.reefs = manta.sum %>%
 #cyclones.all = read.csv('data/primary/170905 Cyclone data from Marji.csv', strip.white=TRUE)
 #cyclones.all = read.csv('data/primary/170909 Cyclone wave data from Marji.csv', strip.white=TRUE)
 ## cyclones.all = read.csv('data/primary/20200330 Cyclone wave data from Marji.csv', strip.white=TRUE) %>% dplyr::select(-max)
-cyclones.all = read.csv('../data/primary/20210310 Cyclone wave data from Marji.csv', strip.white=TRUE) %>%
+cyclones.all = read.csv('../data/primary/20221114 Cyclone wave data from Marji.csv', strip.white=TRUE) %>%
     dplyr::select(-max)
 
 cyclones = cyclones.all %>%
@@ -45,7 +45,7 @@ cyclones$Location <- factor(cyclones$Zone, levels=c("Northern GBR","Central GBR"
 
 ## Fill in the gaps
 cyclones.lookup = expand.grid(Location=c("Northern GBR","Central GBR","Southern GBR"),
-                              REPORT_YEAR=seq.int(1985,2018,by=1))
+                              REPORT_YEAR=seq.int(1985,2022,by=1))
 cyclones %>% full_join(cyclones.lookup) %>% filter(is.na(Zone)) %>% head
 
 cyclones = cyclones %>% full_join(cyclones.lookup) %>% arrange(REEF_NAME,REPORT_YEAR)  
@@ -57,16 +57,29 @@ cyclones = cyclones %>% mutate(Zone=ifelse(Location=='Northern GBR', 'Northern G
 ## 2022 ======================================================
 ## Mike would like calculations of the duration between cyclones per decade
 
+## The intervals could be calculated either by:
+## - looking forwards from the focal decade or
+## - looking backwards from teh focal decade
+
+## The first iteration of this analysis looked forward.  The problem
+## with this approach is that outcomes in later years are going to be
+## biased towards having few reefs with intervals On the other hand,
+## looking backwards will have a similar effect on early records.
+
+## ---- Look forward
 cyclones.interval <- cyclones %>%
     #filter(REEF_ID == 15005) %>%
     filter(CYCLONEcat > 0) %>%
     group_by(REEF_NAME) %>% 
     mutate(lead = lead(REPORT_YEAR),
+           lag = lag(REPORT_YEAR),
            Interval = lead - REPORT_YEAR,
+           Interval.lag = REPORT_YEAR - lag,
            Decade = factor(case_when(between(REPORT_YEAR, 1981,1990) ~ 1980,
                               between(REPORT_YEAR, 1991,2000) ~ 1990,
                               between(REPORT_YEAR, 2001,2010) ~ 2010,
-                              between(REPORT_YEAR, 2011,2020) ~ 2020)),
+                              between(REPORT_YEAR, 2011,2020) ~ 2020,
+                              between(REPORT_YEAR, 2021,2030) ~ 2030)),
            ) %>%
 #    group_by(Location, Decade, REEF_NAME) %>%
 #    summarise(Interval = mean(Diff, na.rm = TRUE)) %>%
@@ -75,37 +88,140 @@ cyclones.interval <- cyclones %>%
 ggplot(cyclones.interval) +
     geom_point(aes(y=Interval, x=REEF_NAME)) +
     facet_grid(Decade~ Location, scales='free_x')
+ggplot(cyclones.interval) +
+    geom_point(aes(y=Interval.lag, x=REEF_NAME)) +
+    facet_grid(Decade~ Location, scales='free_x')
 
 cyclones.interval %>%
    group_by(Location, Decade, REEF_NAME) %>%
    summarise(Interval = mean(Interval, na.rm = TRUE)) %>%
     group_by(Decade, Location) %>%
     summarise(Interval = mean(Interval, na.rm=TRUE))
+cyclones.interval %>%
+   group_by(Location, Decade, REEF_NAME) %>%
+   summarise(Interval = mean(Interval.lag, na.rm = TRUE)) %>%
+    group_by(Decade, Location) %>%
+    summarise(Interval = mean(Interval, na.rm=TRUE))
 
 cyclones.interval <- cyclones.interval %>%
     mutate(Decade_Location = interaction(Decade, Location)) %>%
     filter(!is.na(Interval))
+    ## filter(!is.na(Interval.lag)) %>%
+    ## dplyr::select(-Interval) %>%  
+    ## rename(Interval = Interval.lag)
+
 
 library(brms)
 cyclones.interval.brm<-brm(Interval~0 + Decade_Location+(Decade_Location|REEF_NAME),
                                         #family=poisson(link='log'),
                            family=negbinomial(link = "log", link_shape = "log"),
                            data=cyclones.interval,
-                           chains=3,iter=2000,warmup=500,thin=2, seed = 1)   
+                           chains=3,cores = 3,iter=2000,warmup=500,thin=2, seed = 1,
+                           backend = 'cmdstanr')   
 save(cyclones.interval.brm, file = "../data/modelled/cyclones.interval.brm")
 load(file = "../data/modelled/cyclones.interval.brm")
 summary(cyclones.interval.brm)
 emmeans(cyclones.interval.brm, ~Decade_Location, type='response')
+em <- emmeans(cyclones.interval.brm, ~Decade_Location, type='response') %>% as.data.frame()
+em %>% filter(!Decade_Location %in% c('2030.Northern GBR', '2030.Central GBR', '2030.Southern GBR')) %>%
+    ggplot(aes(y = prob, x = Decade_Location)) +
+    geom_pointrange(aes(ymin = lower.HPD, ymax = upper.HPD))
+## ggemmeans(cyclones.interval.brm, ~Decade_Location) %>% plot()
+
 
 cyclones.interval.brm1<-brm(Interval~0 + Decade+(1|REEF_NAME),
                                         #family=poisson(link='log'),
                            family=negbinomial(link = "log", link_shape = "log"),
-                           data=cyclones.interval,
-                           chains=3,iter=2000,warmup=500,thin=2, seed = 1)   
-save(cyclones.interval.brm1, file = "../data/modelled/cyclones.interval.brm")
+                           data=cyclones.interval,# %>% filter(Decade != 2030),
+                           chains=3,cores = 3,iter=2000,warmup=500,thin=2, seed = 1,
+                           backend = 'cmdstanr')   
+save(cyclones.interval.brm1, file = "../data/modelled/cyclones.interval.brm1")
 load(file = "../data/modelled/cyclones.interval.brm1")
 summary(cyclones.interval.brm1)
-emmeans(cyclones.interval.brm1, ~Decade, type='response')
+emmeans(cyclones.interval.brm1, ~Decade, type='response') %>% as.data.frame() %>%
+    mutate(nDecade = as.numeric(as.character(Decade))) %>% 
+    arrange(nDecade)
+
+## ----end
+## ---- Look backwards
+cyclones.interval <- cyclones %>%
+    #filter(REEF_ID == 15005) %>%
+    filter(CYCLONEcat > 0) %>%
+    group_by(REEF_NAME) %>% 
+    mutate(lead = lead(REPORT_YEAR),
+           lag = lag(REPORT_YEAR),
+           Interval = lead - REPORT_YEAR,
+           Interval.lag = REPORT_YEAR - lag,
+           Decade = factor(case_when(between(REPORT_YEAR, 1981,1990) ~ 1980,
+                              between(REPORT_YEAR, 1991,2000) ~ 1990,
+                              between(REPORT_YEAR, 2001,2010) ~ 2010,
+                              between(REPORT_YEAR, 2011,2020) ~ 2020,
+                              between(REPORT_YEAR, 2021,2030) ~ 2030)),
+           ) %>%
+#    group_by(Location, Decade, REEF_NAME) %>%
+#    summarise(Interval = mean(Diff, na.rm = TRUE)) %>%
+    ungroup()
+
+ggplot(cyclones.interval) +
+    geom_point(aes(y=Interval, x=REEF_NAME)) +
+    facet_grid(Decade~ Location, scales='free_x')
+ggplot(cyclones.interval) +
+    geom_point(aes(y=Interval.lag, x=REEF_NAME)) +
+    facet_grid(Decade~ Location, scales='free_x')
+
+cyclones.interval %>%
+   group_by(Location, Decade, REEF_NAME) %>%
+   summarise(Interval = mean(Interval, na.rm = TRUE)) %>%
+    group_by(Decade, Location) %>%
+    summarise(Interval = mean(Interval, na.rm=TRUE))
+cyclones.interval %>%
+   group_by(Location, Decade, REEF_NAME) %>%
+   summarise(Interval = mean(Interval.lag, na.rm = TRUE)) %>%
+    group_by(Decade, Location) %>%
+    summarise(Interval = mean(Interval, na.rm=TRUE))
+
+cyclones.interval <- cyclones.interval %>%
+    mutate(Decade_Location = interaction(Decade, Location)) %>%
+    ## filter(!is.na(Interval))
+    filter(!is.na(Interval.lag)) %>%
+    dplyr::select(-Interval) %>%  
+    rename(Interval = Interval.lag)
+
+
+library(brms)
+cyclones.interval.brm<-brm(Interval~0 + Decade_Location+(Decade_Location|REEF_NAME),
+                                        #family=poisson(link='log'),
+                           family=negbinomial(link = "log", link_shape = "log"),
+                           data=cyclones.interval,
+                           chains=3,cores = 3,iter=2000,warmup=500,thin=2, seed = 1,
+                           backend = 'cmdstanr')   
+save(cyclones.interval.brm, file = "../data/modelled/cyclones.interval.back.brm")
+load(file = "../data/modelled/cyclones.interval.back.brm")
+summary(cyclones.interval.brm)
+emmeans(cyclones.interval.brm, ~Decade_Location, type='response')
+em <- emmeans(cyclones.interval.brm, ~Decade_Location, type='response') %>% as.data.frame()
+em %>% filter(!Decade_Location %in% c('2030.Northern GBR', '2030.Central GBR', '2030.Southern GBR')) %>%
+    ggplot(aes(y = prob, x = Decade_Location)) +
+    geom_pointrange(aes(ymin = lower.HPD, ymax = upper.HPD))
+## ggemmeans(cyclones.interval.brm, ~Decade_Location) %>% plot()
+
+
+cyclones.interval.brm1<-brm(Interval~0 + Decade+(1|REEF_NAME),
+                                        #family=poisson(link='log'),
+                           family=negbinomial(link = "log", link_shape = "log"),
+                           data=cyclones.interval,# %>% filter(Decade != 2030),
+                           chains=3,cores = 3,iter=2000,warmup=500,thin=2, seed = 1,
+                           backend = 'cmdstanr')   
+save(cyclones.interval.brm1, file = "../data/modelled/cyclones.interval.back.brm1")
+load(file = "../data/modelled/cyclones.interval.back.brm1")
+summary(cyclones.interval.brm1)
+emmeans(cyclones.interval.brm1, ~Decade, type='response') %>% as.data.frame() %>%
+    mutate(nDecade = as.numeric(as.character(Decade))) %>% 
+    arrange(nDecade)
+
+## ----end
+
+
 ## ===========================================================
 
 ## Generate a summary that calculates the number and percentage of reefs in each zone per year
