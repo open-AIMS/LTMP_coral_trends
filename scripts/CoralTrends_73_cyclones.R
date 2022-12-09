@@ -197,6 +197,7 @@ cyclones.interval.brm<-brm(Interval~0 + Decade_Location+(Decade_Location|REEF_NA
                            backend = 'cmdstanr')   
 save(cyclones.interval.brm, file = "../data/modelled/cyclones.interval.back.brm")
 load(file = "../data/modelled/cyclones.interval.back.brm")
+save(cyclones.interval.brm, file = "../data/modelled/cyclones.interval.back.brm.RData")
 summary(cyclones.interval.brm)
 emmeans(cyclones.interval.brm, ~Decade_Location, type='response')
 em <- emmeans(cyclones.interval.brm, ~Decade_Location, type='response') %>% as.data.frame()
@@ -214,6 +215,7 @@ cyclones.interval.brm1<-brm(Interval~0 + Decade+(1|REEF_NAME),
                            backend = 'cmdstanr')   
 save(cyclones.interval.brm1, file = "../data/modelled/cyclones.interval.back.brm1")
 load(file = "../data/modelled/cyclones.interval.back.brm1")
+save(cyclones.interval.brm1, file = "../data/modelled/cyclones.interval.back.brm1.RData")
 summary(cyclones.interval.brm1)
 emmeans(cyclones.interval.brm1, ~Decade, type='response') %>% as.data.frame() %>%
     mutate(nDecade = as.numeric(as.character(Decade))) %>% 
