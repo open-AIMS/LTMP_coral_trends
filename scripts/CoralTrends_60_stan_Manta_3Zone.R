@@ -9,7 +9,8 @@ load('../data/processed/manta.tow.RData')
 all.reefs = manta.sum %>%
     dplyr:::select(P_CODE.mod,REEF_NAME,REEF_ID,Latitude,Longitude) %>%
     group_by(REEF_NAME,REEF_ID) %>%
-    summarize_at(vars(Latitude,Longitude), funs(mean)) %>%
+    ## summarize_at(vars(Latitude,Longitude), funs(mean)) %>%
+    summarize(across(c(Latitude,Longitude), mean)) %>%
     as.data.frame
 write.csv(all.reefs,file='../data/all.reefs_3Zone.csv', quote=FALSE, row.names=FALSE)
 
@@ -25,8 +26,17 @@ dat.all = manta.sum %>%
 ##original, stan_glmer beta, INLA_tow beta scaled, INLA_reef binomial, INLA_reef beta
 ##BRMS beta vanilla, BRMS beta disp, MGCV beta , MGCV ordinal, CLMM, BRMS_reef beta,
 ##
-models <- c('BRMS beta vanilla', 'BRMS beta disp', 'glmmTMB beta vanilla', 'glmmTMB beta disp', 'BRMS ordinal')
-models <- 'glmmTMB_tow beta disp'
+## models <- c('BRMS beta vanilla', 'BRMS beta disp', 'glmmTMB beta vanilla', 'glmmTMB beta disp', 'BRMS ordinal')
+## models <- 'glmmTMB_tow beta disp'
+models <- c(
+    ##'BRMS beta vanilla',
+    #'BRMS beta disp'#,
+    'BRMS beta ry disp'#,
+    ##'glmmTMB beta vanilla',
+    #'glmmTMB_tow beta disp',
+    #'glmmTMB_tow beta ry disp'
+    ##'BRMS ordinal'
+)
 ## Fit stan models===================================================================
 
 ## GBR
@@ -288,6 +298,58 @@ models <- 'glmmTMB_tow beta disp'
     gc()
   }
   ## ----end
+    ## ---- Northern.BRMS.tow.beta ry disp **
+    {
+        if ('BRMS beta ry disp' %in% models & 'northern' %in% zone) {
+            cat('Fitting brms ry disp for Northern\n\n')
+            mod.northern_brms.beta.ry.disp <- brm(bf(Cover ~ Year + (1|REEF_NAME/REEF_YEAR), phi~0+Year),
+                                                  data=manta.tow.northern,
+                                                  family=Beta(link='logit'),
+                                                  iter=1e4,
+                                                  warmup=5e3,
+                                                  thin=5,
+                                                  chains=4, cores=4,
+                                                  prior = prior(normal(0, 3), class = "b") +
+                                                      prior(normal(0, 3), class = "Intercept") +
+                                                      prior(gamma(2, 1), class = "sd") #+
+                                                  ## prior(gamma(2, 1), class = "phi")
+                                                  )
+            ## ---- Northern.BRMS.tow.beta disp diagnostics
+            {
+                ## sampling diagnostics
+                pdf(file = '../output/figures/traceplots_northern_brms.beta.ry.disp.pdf')
+                rstan::traceplot(mod.northern_brms.beta.ry.disp$fit)
+                dev.off()
+
+                ## density overlay
+                pdf(file = '../output/figures/density_northern_brms.beta.ry.disp.pdf')
+                mod.northern_brms.beta.ry.disp %>% bayesplot::pp_check(type = "dens_overlay", ndraws = 100) 
+                dev.off()
+
+                ## DHARMa residuals
+                preds <- mod.northern_brms.beta.ry.disp %>%
+                    posterior_predict(nsamples = 250, summary = FALSE)
+                mod.resids <- createDHARMa(
+                    simulatedResponse = t(preds),
+                    observedResponse = manta.tow.northern$Cover,
+                    fittedPredictedResponse = apply(preds, 2, median),
+                    integerResponse = FALSE
+                )
+                pdf(file = '../output/figures/DHARMa_northern_brms.beta.ry.disp.pdf')
+                mod.resids %>% plot()
+                dev.off()
+                save(mod.resids, file=paste0('../data/modelled/resids.northern_brms.beta.ry.disp.RData'))
+            }
+            ## ----end
+            dat.northern_brms.beta.ry.disp = emmeans(mod.northern_brms.beta.ry.disp,
+                                                     ~Year, type='response') %>%
+                as.data.frame()
+            save(mod.northern_brms.beta.ry.disp, dat.northern_brms.beta.ry.disp, file=paste0('../data/modelled/mod.northern_brms.beta.ry.disp.RData'))
+            rm(list=c('dat.northern_brms.beta.ry.disp', 'mod.northern_brms.beta.ry.disp'))
+            gc()
+        }  
+    }
+    ## ----end
   ## ---- Northern.glmmTMB.tow.beta disp
   if ('glmmTMB_tow beta disp' %in% models) {
     mod.northern_glmmTMB.beta.disp <- glmmTMB(Cover ~ Year + (1|REEF_NAME/REEF_YEAR),
@@ -515,7 +577,17 @@ models <- 'glmmTMB_tow beta disp'
     rm(list=c('dat.northern','mod.northern','mod.northern_inla_beta','newdata.northern','newdata.northern_beta', 'mod_northern_inla_binomial','newdata.northern_binomial'))
   }
   ## ----end
-
+  ## Calculate annual change
+  ## ---- Northern.annual.change
+    load(file=paste0('../data/modelled/mod.northern_glmmTMB.beta.disp.RData'))
+    load(file='../data/modelled/dat.all.northern.RData')
+    ## Fix this
+    ## ~/Work/AIMS/Consultations/Mike Emslie/GBR Coral Trends - Mikes paper/new/CoralTrends_stan_manta.R
+    dat.northern = data.frame(Location='Northern',Year=sort(unique(dat.all.northern$Year)), N=length(unique(dat.all.northern$REEF_NAME)))
+    Xmat = model.matrix(~Year, dat.northern)
+    coefs = data.frame(mod.northern) %>% dplyr:::select(matches('^X.*|^Year.*'))
+  ## ----end
+  
 }
 ## ----end
 
@@ -574,7 +646,57 @@ if ('glmmTMB_tow beta disp' %in% models) {
     save(mod.central_glmmTMB.beta.disp, dat.central_glmmTMB.beta.disp, file=paste0('../data/modelled/mod.central_glmmTMB.beta.disp.RData'))
 }
 ## ----end
+    ## ---- Central.BRMS.tow.beta ry disp **
+    {
+        if ('BRMS beta ry disp' %in% models & 'central' %in% zone) {
+            cat('Fitting brms ry disp for Central\n\n')
+            mod.central_brms.beta.ry.disp <- brm(bf(Cover ~ Year + (1|REEF_NAME/REEF_YEAR), phi~0+Year),
+                                              data=manta.tow.central,
+                                              family=Beta(link='logit'),
+                                              iter=1e4,
+                                              warmup=5e3,
+                                              thin=5,
+                                              chains=4, cores=4,
+                                              prior = prior(normal(0, 3), class = "b") +
+                                                  prior(normal(0, 3), class = "Intercept") +
+                                                  prior(gamma(2, 1), class = "sd") #+
+                                              ## prior(gamma(2, 1), class = "phi")
+                                              )
+            dat.central_brms.beta.ry.disp = emmeans(mod.central_brms.beta.ry.disp, ~Year, type='response') %>%
+                as.data.frame()
+            ## ---- Central.BRMS.tow.beta ry disp diagnostics
+            {
+                ## sampling diagnostics
+                pdf(file = '../output/figures/traceplots_central_brms.beta.ry.disp.pdf')
+                rstan::traceplot(mod.central_brms.beta.ry.disp$fit)
+                dev.off()
 
+                ## density overlay
+                pdf(file = '../output/figures/density_central_brms.beta.ry.disp.pdf')
+                mod.central_brms.beta.ry.disp %>% bayesplot::pp_check(type = "dens_overlay", ndraws = 100) 
+                dev.off()
+
+                ## DHARMa residuals
+                preds <- mod.central_brms.beta.ry.disp %>%
+                    posterior_predict(ndraws = 250, summary = FALSE)
+                mod.resids <- createDHARMa(
+                    simulatedResponse = t(preds),
+                    observedResponse = manta.tow.central$Cover,
+                    fittedPredictedResponse = apply(preds, 2, median),
+                    integerResponse = FALSE
+                )
+                pdf(file = '../output/figures/DHARMa_central_brms.beta.ry.disp.pdf')
+                mod.resids %>% plot()
+                dev.off()
+                save(mod.resids, file=paste0('../data/modelled/resids.central_brms.beta.ry.disp.RData'))
+            }
+            ## ----end
+            save(mod.central_brms.beta.ry.disp, dat.central_brms.beta.ry.disp, file=paste0('../data/modelled/mod.central_brms.beta.ry.disp.RData'))
+            rm(list=c('dat.central_brms.beta.ry.disp', 'mod.central_brms.beta.ry.disp'))
+            gc()
+        }  
+    }
+    ## ----end
 ## ----end
 
 
@@ -632,4 +754,60 @@ if ('glmmTMB_tow beta disp' %in% models) {
     save(mod.southern_glmmTMB.beta.disp, dat.southern_glmmTMB.beta.disp, file=paste0('../data/modelled/mod.southern_glmmTMB.beta.disp.RData'))
 }
 ## ----end
+    ## ---- Southern.BRMS.tow.beta disp **
+    {
+        if ('BRMS beta ry disp' %in% models & 'southern' %in% zone) {
+            priors <- prior(normal(0, 3), class = "b") +
+                prior(normal(0, 3), class = "Intercept") +
+                prior(gamma(2, 1), class = "sd") 
+            ## The above priors where 0,1  0,1  2,1
+            ## might like to try 0,2 0,1.5 2,1
+            mod.southern_brms.beta.ry.disp <- brm(bf(Cover ~ Year + (1|REEF_NAME/REEF_YEAR), phi~0+Year),
+                                               data=manta.tow.southern,
+                                               family=Beta(link='logit'),
+                                               iter=1e4,
+                                               warmup=5e3,
+                                               thin=5,
+                                               chains=4, cores=4,
+                                               prior = priors
+                                               ## prior = prior(normal(0, 3), class = "b") +
+                                               ##     prior(normal(0, 3), class = "Intercept") +
+                                               ##     prior(gamma(2, 1), class = "sd") #+
+                                               ## ## prior(gamma(2, 1), class = "phi")
+                                               )
+            dat.southern_brms.beta.ry.disp = emmeans(mod.southern_brms.beta.ry.disp, ~Year, type='response') %>%
+                as.data.frame()
+            ## ---- Southern.BRMS.tow.beta ry disp diagnostics
+            {
+                ## sampling diagnostics
+                pdf(file = '../output/figures/traceplots_southern_brms.beta.ry.disp.pdf')
+                rstan::traceplot(mod.southern_brms.beta.ry.disp$fit)
+                dev.off()
+
+                ## density overlay
+                pdf(file = '../output/figures/density_southern_brms.beta.ry.disp.pdf')
+                mod.southern_brms.beta.ry.disp %>% bayesplot::pp_check(type = "dens_overlay", ndraws = 100) 
+                dev.off()
+
+                ## DHARMa residuals
+                preds <- mod.southern_brms.beta.ry.disp %>%
+                    posterior_predict(ndraws = 250, summary = FALSE)
+                mod.resids <- createDHARMa(
+                    simulatedResponse = t(preds),
+                    observedResponse = manta.tow.southern$Cover,
+                    fittedPredictedResponse = apply(preds, 2, median),
+                    integerResponse = FALSE
+                )
+                pdf(file = '../output/figures/DHARMa_southern_brms.beta.ry.disp.pdf')
+                mod.resids %>% plot()
+                dev.off()
+                save(mod.resids, file=paste0('../data/modelled/resids.southern_brms.beta.ry.disp.RData'))
+            }
+            ## ----end
+            save(mod.southern_brms.beta.ry.disp, dat.southern_brms.beta.ry.disp, file=paste0('../data/modelled/mod.southern_brms.beta.ry.disp.RData'))
+            rm(list=c('dat.southern_brms.beta.ry.disp', 'mod.southern_brms.beta.ry.disp'))
+            gc()
+        }  
+    }
+    ## ----end
 ## ----end
