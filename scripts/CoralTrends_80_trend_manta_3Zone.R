@@ -777,4 +777,248 @@ dev.off()
 }    
 ## ----end
 
+## ---- annual change 
+{
+    ## ---- calculate change
+    load('../data/processed/manta.sum.RData')
+    ## raw data
+    manta.change <- manta.sum %>%
+        group_by(REEF_NAME) %>%
+        mutate(Cover.lag = lag(Cover),
+               Change = 100*(Cover-Cover.lag),#/Cover.lag,
+               Time.lag=lag(REPORT_YEAR),
+               Time.change=REPORT_YEAR-Time.lag,
+               Change.annual=Change/Time.change)
+    manta.change <- manta.change %>% ungroup %>%
+        arrange(REEF_ID,REPORT_YEAR) %>%
+        mutate(Zone = factor(Zone, levels = levels(Zone),
+                                 labels = c('Northern GBR', 'Central GBR', 'Southern GBR')))
+    ## ----end
+    ## ---- fill in years
+    sampling_years <- manta.change %>%
+        dplyr::select(Zone,Zone,REEF_NAME,REPORT_YEAR) %>%
+        distinct() %>%
+        arrange(Zone,Zone,REEF_NAME,REPORT_YEAR)
+
+    ## Fill in the years
+    manta.change <-
+        manta.change %>%
+        group_by(REEF_NAME) %>%
+        do({
+            x=.
+            x=x%>% full_join(
+                       data.frame(Zone=unique(x$Zone),
+                                  Zone=unique(x$Zone),
+                                  REEF_NAME=unique(x$REEF_NAME),
+                                  REPORT_YEAR=seq(min(x$REPORT_YEAR),max(x$REPORT_YEAR), by=1))) %>%
+                arrange(REPORT_YEAR)
+            value = x$Change.annual
+            for (i in nrow(x):1) {
+                value[i] = ifelse(is.na(value[i]), value[i+1], value[i])
+            }
+            x = x %>% mutate(Change.annual=value)
+            x
+        }) %>% ungroup %>%
+        mutate(Zone = factor(Zone, levels = levels(Zone),
+                                 labels = c('Northern GBR', 'Central GBR', 'Southern GBR')))
+    ## ----end
+    ## ---- remove non-sampling years
+    ## Remove the non-sampling years
+    manta.change <-
+        manta.change %>%
+        mutate(Exclude = ifelse(Zone == 'Northern GBR' &
+                                REPORT_YEAR %in% c(2012,2014,2016), 'Y',NA)) %>%
+        filter(is.na(Exclude)) %>%
+        dplyr::select(-Exclude)
+    save(manta.change, file='../data/modelled/manta.change.RData')
+    ## ----end
+    ## ---- change in coral cover plot
+    g2 <- ggplot(manta.change, aes(y=Change.annual, x=as.numeric(as.character(REPORT_YEAR)))) +
+        geom_hline(yintercept=0, color='red') +
+        geom_point(size=0.5) +
+        facet_grid(~Zone) +
+        scale_y_continuous('Change in \n% coral cover') +
+        scale_x_continuous('',breaks=seq(1990,2020,by=5), limits=c(1985,2023), expand=c(0,0),position='top') +
+        theme_classic()+
+        theme(strip.background=element_blank(), strip.text.x=element_blank(),
+              panel.border=element_rect(fill=NA,color='black'),
+              axis.title.y=element_text(size=rel(1.5),margin=margin(r=1,unit='lines')),
+                                        #axis.text.x=element_text(size=rel(1.2)),
+              axis.text.x=element_blank(), axis.title.x=element_blank(),
+              axis.text.y=element_text(size=rel(1.2)),
+              panel.grid.minor=element_line(size=0.1,color=NA),
+              panel.grid.major=element_line(size=0.1,color='gray70'),
+              panel.grid.minor.x=element_line(size=0.1,color=NA,linetype='dashed'),
+              panel.grid.major.x=element_line(size=0.1,color='gray70',linetype='dashed'),
+              plot.margin=unit(c(2,10,0,0),'pt'))
+
+    old <- manta.change
+
+    ## ----end
+    ## ---- change bars
+    manta.change.bars <- manta.change %>%
+        filter(!is.na(Change.annual)) %>%
+        group_by(Zone, REPORT_YEAR) %>%
+        summarize(N=n(),
+                  N.p=100*sum(Change.annual>0 & Change.annual<=5)/N,
+                  N.p5=100*sum(Change.annual>5 & Change.annual<=10)/N,
+                  N.n=-100*sum(Change.annual<0 & Change.annual>= -5)/N,
+                  N.n5=-100*sum(Change.annual< -5 & Change.annual>= -10)/N,
+                                        #N.p5=100*sum(Change.annual>10)/N,
+                                        #N.n5=-100*sum(Change.annual< -5)/N,
+                  N.p10=100*sum(Change.annual>10)/N,
+                  N.n10=-100*sum(Change.annual< -10)/N
+                  ) %>%
+        gather(key=Change, value=Percent,-Zone,-REPORT_YEAR,-N) %>%
+                                        #mutate(Change=factor(Change, levels=c('N.n10', 'N.n', 'N.p', 'N.p10')))
+        mutate(Change=factor(Change, levels=c('N.n10', 'N.p10','N.n5', 'N.p5','N.n', 'N.p'))) 
+    save(manta.change.bars, file='../data/modelled/manta.change.bars.RData')
+
+    hues <- RColorBrewer::brewer.pal(4, "Blues")
+
+    ## ----end
+    ## ---- change bars plot
+    g1 <-ggplot(data = manta.change.bars,
+                aes(y = Percent, x = REPORT_YEAR, fill = Change)) +
+        geom_bar(stat = 'Identity', alpha = 1) +
+        scale_fill_manual('Change', breaks = c('N.p10','N.p5','N.p','N.n','N.n5','N.n10'),
+                          ##values = c('darkred','darkgreen','red','green','orange','lightgreen'),
+                          values = c('darkgreen','green','lightgreen', 'orange', 'red', 'darkred'),
+                          labels = c('Increase > 10%', 'Increase 5-10%', 'Increase <5%',
+                                     'Decline < 5%', 'Decline 5-10%', 'Decline > 10%')) +
+        facet_wrap(~Zone, nrow = 1, scales = 'fixed') +
+        scale_y_continuous('Proportion of reefs') +
+        scale_x_continuous('', breaks = seq(1990, 2020, by = 5),
+                           limits = c(1985, 2023), expand = c(0,0)) +
+        theme_classic()+
+        theme(strip.background = element_rect(fill = hues[2], color = 'black', size = 0.5),
+              panel.background = element_rect(color = 'black'),
+              axis.title.y = element_text(size = rel(1.5), margin = margin(r = 1, unit = 'lines')),
+              axis.text.x = element_text(size = rel(1.0)),
+              axis.title.x = element_blank(),
+              axis.text.y = element_text(size = rel(1.2)),
+              panel.grid.minor = element_line(size = 0.1, color = NA),
+              panel.grid.major = element_line(size = 0.1, color = 'gray70'),
+              panel.grid.minor.x = element_line(size = 0.1, color = NA, linetype = 'dashed'),
+              panel.grid.major.x = element_line(size = 0.1, color = 'gray70', linetype = 'dashed'),
+              strip.text = element_text(margin = margin(t = 2,
+                                                        b = 2,
+                                                        unit = 'lines'),
+                                        size = 20, lineheight = 0.5,
+                                        face = 'bold', hjust = 0.9, vjust = -1),
+              plot.margin = unit(c(0, 0, 2, 0), 'pt'))
+    ## ----end
+
+    ## ---- put figures together
+    gT <- ggplot_gtable(ggplot_build(g1))
+    facets <- grep("strip-t-1-1", gT$layout$name)
+    gg <- with(gT$layout[facets,],
+               gtable_add_grob(gT, ggplotGrob(gt1),t=t, l=5, b=b, r=5, name="pic_predator"))
+    facets <- grep("strip-t-2-1", gT$layout$name)
+    gg <- with(gg$layout[facets,],
+               gtable_add_grob(gg, ggplotGrob(gt2),t=t, l=9, b=b, r=9, name="pic_predator"))
+    facets <- grep("strip-t-3-1", gT$layout$name)
+    gg <- with(gg$layout[facets,],
+               gtable_add_grob(gg, ggplotGrob(gt3),t=t, l=13, b=b, r=13, name="pic_predator"))
+    if (INCLUDE_GBR) {
+        facets <- grep("strip-t-5-1", gT$layout$name)
+        gg <- with(gg$layout[facets,],
+                   gtable_add_grob(gg, ggplotGrob(gt5),t=t, l=17, b=b, r=20, name="pic_predator"))
+    }
+
+    g1a <- gg
+    g2a <- ggplot_gtable(ggplot_build(g2))
+    g1a$widths[c(1,2,3,4)]=g2a$widths[c(1,2,3,4)]
+    g2a$widths[13]=g1a$widths[17]+g1a$widths[16]
+    grid.arrange(g1a,g2a, nrow=2,heights=c(2,1),padding=unit(-1,'lines'))
+
+    ggsave(file='../output/figures/CoralChangeFig.png',
+           grid.arrange(g1a,g2a, nrow=2,heights=c(2,1),padding=unit(-1,'lines')),
+           width=10, height=5, units='in',dpi=600) 
+    ggsave(file='../output/figures/CoralChangeFig.pdf',
+           grid.arrange(g1a,g2a, nrow=2,heights=c(2,1),padding=unit(-1,'lines')),
+           width=10, height=5, units='in') 
+
+    ## ----end
+
+    if (1 ==2) {
+        ## ---- Northern
+    load(file = '../data/modelled/dat.all.northern.RData')
+    load(file = '../data/modelled/mod.northern_brms.beta.ry.disp.RData')
+    mod.northern <- mod.northern_brms.beta.ry.disp
+    dat.northern <- data.frame(Location='Northern',
+                              Year=sort(unique(dat.all.northern$Year)),
+                              N=length(unique(dat.all.northern$REEF_NAME)))
+    Xmat <- model.matrix(~Year, dat.northern)
+    coefs <- data.frame(mod.northern) %>%
+        dplyr:::select(matches('b_Year.*'))
+    Fit <- binomial()$linkinv(as.matrix(coefs) %*% t(Xmat))
+    contr.sequen <- multcomp::contrMat(table(dat.northern$Year), type='Sequen')
+    Fit <- Fit %*% t(contr.sequen)
+    dat.northern.diff <- cbind(data.frame(Location = 'Northern'),
+                               plyr:::adply(Fit,2,function(x) {
+                                   data.frame(mean=mean(x), coda:::HPDinterval(coda:::as.mcmc(x)))
+                               })
+                               ) %>% dplyr::rename(Years=X1) %>% mutate(Year=stringr::str_sub(Years, start=1, end=4))
+    save(dat.northern.diff, file='../data/modelled/dat.northern.diff.RData')
+    ## ----end
+
+        ## ---- Central
+    load(file = '../data/modelled/dat.all.central.RData')
+    load(file = '../data/modelled/mod.central_brms.beta.ry.disp.RData')
+    mod.central <- mod.central_brms.beta.ry.disp
+    dat.central <- data.frame(Location='Central',
+                              Year=sort(unique(dat.all.central$Year)),
+                              N=length(unique(dat.all.central$REEF_NAME)))
+    Xmat <- model.matrix(~Year, dat.central)
+    coefs <- data.frame(mod.central) %>%
+        dplyr:::select(matches('b_Year.*'))
+    Fit <- binomial()$linkinv(as.matrix(coefs) %*% t(Xmat))
+    contr.sequen <- multcomp::contrMat(table(dat.central$Year), type='Sequen')
+    Fit <- Fit %*% t(contr.sequen)
+    dat.central.diff <- cbind(data.frame(Location = 'Central'),
+                               plyr:::adply(Fit,2,function(x) {
+                                   data.frame(mean=mean(x), coda:::HPDinterval(coda:::as.mcmc(x)))
+                               })
+                               ) %>% dplyr::rename(Years=X1) %>% mutate(Year=stringr::str_sub(Years, start=1, end=4))
+    save(dat.central.diff, file='../data/modelled/dat.central.diff.RData')
+    ## ----end
+        
+        ## ---- Southern
+    load(file = '../data/modelled/dat.all.southern.RData')
+    load(file = '../data/modelled/mod.southern_brms.beta.ry.disp.RData')
+    mod.southern <- mod.southern_brms.beta.ry.disp
+    dat.southern <- data.frame(Location='Southern',
+                              Year=sort(unique(dat.all.southern$Year)),
+                              N=length(unique(dat.all.southern$REEF_NAME)))
+    Xmat <- model.matrix(~Year, dat.southern)
+    coefs <- data.frame(mod.southern) %>%
+        dplyr:::select(matches('b_Year.*'))
+    Fit <- binomial()$linkinv(as.matrix(coefs) %*% t(Xmat))
+    contr.sequen <- multcomp::contrMat(table(dat.southern$Year), type='Sequen')
+    Fit <- Fit %*% t(contr.sequen)
+    dat.southern.diff <- cbind(data.frame(Location = 'Southern'),
+                               plyr:::adply(Fit,2,function(x) {
+                                   data.frame(mean=mean(x), coda:::HPDinterval(coda:::as.mcmc(x)))
+                               })
+                               ) %>% dplyr::rename(Years=X1) %>% mutate(Year=stringr::str_sub(Years, start=1, end=4))
+    save(dat.southern.diff, file='../data/modelled/dat.southern.diff.RData')
+    ## ----end
+
+        ## ---- annual changes
+    annual <- rbind(dat.northern.diff, dat.central.diff, dat.southern.diff) %>%
+        dplyr::rename(Zone = Location) %>%
+        mutate(Zone = factor(Zone, levels = unique(Zone),
+                             labels=c('Northern\n', 'Central\n', 'Southern\n')))
+    ## Make the changes annual
+    annual <- annual %>%
+        mutate(Year0 = stringr::str_sub(Years, start = 8),
+               Diff = as.integer(Year) - as.integer(Year0)) %>%
+        mutate_at(vars(mean, lower, upper), function(x, Diff = .$Diff) x/Diff)
+    save(annual, file = '../data/modelled/annual.change.RData')
+
+    ## ----end
+    }
+}
+## ----end
 
