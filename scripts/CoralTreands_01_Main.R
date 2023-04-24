@@ -83,12 +83,15 @@ source('CoralTrends_73_cyclones.R')
 ############################
 ## Construct trend graphs ##
 ############################
+
+### Produces Figure 4
 source('CoralTrends_80_trend_manta_3Zone.R')
 
 ## Map
 source('CoralTrends_map_manta.R') 
 
 ## Disturbance Frequency
+### Produces Figure 3 
 source('CoralTrends_75_disturbanceFrequency_3Zone.R')
 
 
